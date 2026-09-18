@@ -1,0 +1,458 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-stone-950 text-stone-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}FoodSnap — Intelligent Food Image Recognition & Recipes{% endblock %}</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        amber: {
+                            300: '#fcd34d',
+                            400: '#fbbf24',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                            700: '#b45309',
+                        },
+                        stone: {
+                            700: '#44403c',
+                            800: '#292524',
+                            850: '#201d1b',
+                            900: '#1c1917',
+                            950: '#0c0a09',
+                        }
+                    },
+                    fontFamily: {
+                        serif: ['Georgia', 'Cambria', 'serif'],
+                        sans: ['ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        /* Custom dark scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(12, 10, 9, 0.8); }
+        ::-webkit-scrollbar-thumb { background: rgba(120, 113, 108, 0.4); border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(245, 158, 11, 0.6); }
+        .scrollbar-none::-webkit-scrollbar { display: none; }
+        .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col bg-stone-950 text-stone-100 font-sans antialiased selection:bg-amber-500 selection:text-stone-950">
+
+    <!-- Global Header / Navigation -->
+    <header class="sticky top-0 z-40 bg-stone-900/95 backdrop-blur-md border-b border-stone-800/90 text-stone-100 shadow-lg">
+        <div class="w-full mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Brand / Logo -->
+                <a href="{% url 'home' %}" class="flex items-center gap-3 group select-none" id="brand-logo">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center shadow-md group-hover:from-amber-400 group-hover:to-amber-600 transition-all flex-shrink-0">
+                        <i class="fa-solid fa-utensils text-stone-950 text-base"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xl font-bold tracking-tight text-white font-serif group-hover:text-amber-400 transition-colors">FoodSnap</span>
+                            <span class="px-2 py-0.5 text-[9px] uppercase tracking-wider font-bold rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                                Vision Engine
+                            </span>
+                        </div>
+                        <p class="text-[11px] text-stone-400 hidden sm:block">
+                            Culinary Recognition &amp; Global Recipe Intelligence
+                        </p>
+                    </div>
+                </a>
+
+                <!-- Desktop Navigation Bar (All Tabs) -->
+                <nav class="hidden xl:flex items-center gap-1 bg-stone-950/60 p-1 rounded-2xl border border-stone-800/80" aria-label="Main Navigation">
+                    <a href="{% url 'home' %}" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition-all {% if request.resolver_match.url_name == 'home' %}bg-amber-500 text-stone-950 font-bold shadow-md shadow-amber-500/20{% else %}text-stone-300 hover:text-white hover:bg-stone-800/70{% endif %}">
+                        <i class="fa-solid fa-camera {% if request.resolver_match.url_name == 'home' %}text-stone-950{% else %}text-stone-400{% endif %} text-sm"></i>
+                        <span>Dish Recognition</span>
+                    </a>
+                    <a href="{% url 'recipes' %}" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition-all {% if request.resolver_match.url_name == 'recipes' %}bg-amber-500 text-stone-950 font-bold shadow-md shadow-amber-500/20{% else %}text-stone-300 hover:text-white hover:bg-stone-800/70{% endif %}">
+                        <i class="fa-solid fa-globe {% if request.resolver_match.url_name == 'recipes' %}text-stone-950{% else %}text-stone-400{% endif %} text-sm"></i>
+                        <span>Global Search</span>
+                    </a>
+                    <a href="{% url 'nearby' %}" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition-all {% if request.resolver_match.url_name == 'nearby' %}bg-amber-500 text-stone-950 font-bold shadow-md shadow-amber-500/20{% else %}text-stone-300 hover:text-white hover:bg-stone-800/70{% endif %}">
+                        <i class="fa-solid fa-location-dot {% if request.resolver_match.url_name == 'nearby' %}text-stone-950{% else %}text-stone-400{% endif %} text-sm"></i>
+                        <span>Nearby Dining</span>
+                    </a>
+                    <a href="{% url 'ai_verifier' %}" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition-all {% if request.resolver_match.url_name == 'ai_verifier' %}bg-amber-500 text-stone-950 font-bold shadow-md shadow-amber-500/20{% else %}text-stone-300 hover:text-white hover:bg-stone-800/70{% endif %}">
+                        <i class="fa-solid fa-layer-group {% if request.resolver_match.url_name == 'ai_verifier' %}text-stone-950{% else %}text-stone-400{% endif %} text-sm"></i>
+                        <span>Feature Vectors</span>
+                    </a>
+                    <a href="{% url 'favorites' %}" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition-all {% if request.resolver_match.url_name == 'favorites' %}bg-amber-500 text-stone-950 font-bold shadow-md shadow-amber-500/20{% else %}text-stone-300 hover:text-white hover:bg-stone-800/70{% endif %}">
+                        <i class="fa-solid fa-bookmark {% if request.resolver_match.url_name == 'favorites' %}text-stone-950{% else %}text-stone-400{% endif %} text-sm"></i>
+                        <span>Saved</span>
+                    </a>
+                    <a href="{% url 'dashboard' %}" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition-all {% if request.resolver_match.url_name == 'dashboard' %}bg-amber-500 text-stone-950 font-bold shadow-md shadow-amber-500/20{% else %}text-stone-300 hover:text-white hover:bg-stone-800/70{% endif %}">
+                        <i class="fa-solid fa-chart-simple {% if request.resolver_match.url_name == 'dashboard' %}text-stone-950{% else %}text-stone-400{% endif %} text-sm"></i>
+                        <span>Engine</span>
+                    </a>
+                </nav>
+
+                <!-- Right Actions: Help Guide + User Auth / Mobile Toggle -->
+                <div class="flex items-center gap-4">
+                    <span class="sr-only">&nbsp;</span>
+                    <button onclick="openGuideModal()" class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-300 hover:text-white text-xs font-medium border border-stone-700 transition-colors" title="How FoodSnap Works">
+                        <i class="fa-solid fa-circle-question text-amber-400"></i>
+                        <span>Guide</span>
+                    </button>
+
+                    <!-- PillNav Style Auth Group -->
+                    <div class="hidden sm:flex items-center rounded-full bg-stone-950 p-1 border border-stone-800 shadow-inner">
+                        {% if user.is_authenticated %}
+                        <form method="post" action="{% url 'logout' %}" class="inline m-0 p-0">
+                            {% csrf_token %}
+                            <button type="submit" class="px-5 py-1.5 rounded-full bg-stone-800 hover:bg-stone-700 text-stone-200 hover:text-white text-sm font-semibold transition-colors shadow-sm border border-stone-700/50">
+                                Logout
+                            </button>
+                        </form>
+                        {% else %}
+                        <a href="{% url 'login' %}" class="px-5 py-1.5 rounded-full text-sm transition-colors {% if request.resolver_match.url_name == 'login' %}bg-amber-500 text-stone-950 font-bold shadow-sm{% else %}text-stone-400 hover:text-stone-200 font-semibold{% endif %}">
+                            Login
+                        </a>
+                        <a href="{% url 'register' %}" class="px-5 py-1.5 rounded-full text-sm transition-all {% if request.resolver_match.url_name == 'login' %}text-stone-400 hover:text-stone-200 font-semibold{% else %}bg-amber-500 text-stone-950 font-bold shadow-sm{% endif %}">
+                            Sign up
+                        </a>
+                        {% endif %}
+                    </div>
+
+                    <!-- Mobile Hamburger Menu Button -->
+                    <button
+                        onclick="toggleMobileMenu()"
+                        id="mobile-hamburger-btn"
+                        class="xl:hidden p-2.5 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 hover:text-white border border-stone-700 transition-colors flex items-center justify-center min-h-[42px] min-w-[42px]"
+                        aria-label="Toggle Navigation Menu"
+                    >
+                        <i class="fa-solid fa-bars text-base" id="hamburger-icon"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Horizontal Quick-Scroll Bar on Mobile -->
+            <div class="flex xl:hidden overflow-x-auto py-2.5 gap-2 border-t border-stone-800/80 scrollbar-none items-center">
+                <a href="{% url 'home' %}" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all min-h-[36px] {% if request.resolver_match.url_name == 'home' %}bg-amber-500 text-stone-950 font-bold shadow-md shadow-amber-500/20{% else %}bg-stone-800/90 text-stone-300 hover:bg-stone-800 border border-stone-700/60{% endif %}">
+                    <i class="fa-solid fa-camera text-xs"></i>
+                    <span>Scan Dish</span>
+                </a>
+                <a href="{% url 'recipes' %}" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all min-h-[36px] {% if request.resolver_match.url_name == 'recipes' %}bg-amber-500 text-stone-950 font-bold shadow-md shadow-amber-500/20{% else %}bg-stone-800/90 text-stone-300 hover:bg-stone-800 border border-stone-700/60{% endif %}">
+                    <i class="fa-solid fa-globe text-xs"></i>
+                    <span>Global Search</span>
+                    <span class="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold {% if request.resolver_match.url_name == 'recipes' %}bg-stone-950 text-amber-300{% else %}bg-stone-900 text-stone-400{% endif %}">&nbsp;Live</span>
+                </a>
+                <a href="{% url 'nearby' %}" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all min-h-[36px] {% if request.resolver_match.url_name == 'nearby' %}bg-amber-500 text-stone-950 font-bold shadow-md shadow-amber-500/20{% else %}bg-stone-800/90 text-stone-300 hover:bg-stone-800 border border-stone-700/60{% endif %}">
+                    <i class="fa-solid fa-location-dot text-xs"></i>
+                    <span>Nearby</span>
+                    <span class="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold {% if request.resolver_match.url_name == 'nearby' %}bg-stone-950 text-amber-300{% else %}bg-stone-900 text-stone-400{% endif %}">&nbsp;Radar</span>
+                </a>
+                <a href="{% url 'ai_verifier' %}" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all min-h-[36px] {% if request.resolver_match.url_name == 'ai_verifier' %}bg-amber-500 text-stone-950 font-bold shadow-md shadow-amber-500/20{% else %}bg-stone-800/90 text-stone-300 hover:bg-stone-800 border border-stone-700/60{% endif %}">
+                    <i class="fa-solid fa-layer-group text-xs"></i>
+                    <span>Vectors</span>
+                    <span class="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold {% if request.resolver_match.url_name == 'ai_verifier' %}bg-stone-950 text-amber-300{% else %}bg-stone-900 text-stone-400{% endif %}">&nbsp;80-D</span>
+                </a>
+                <a href="{% url 'favorites' %}" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all min-h-[36px] {% if request.resolver_match.url_name == 'favorites' %}bg-amber-500 text-stone-950 font-bold shadow-md shadow-amber-500/20{% else %}bg-stone-800/90 text-stone-300 hover:bg-stone-800 border border-stone-700/60{% endif %}">
+                    <i class="fa-solid fa-bookmark text-xs"></i>
+                    <span>Saved</span>
+                </a>
+                <a href="{% url 'dashboard' %}" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all min-h-[36px] {% if request.resolver_match.url_name == 'dashboard' %}bg-amber-500 text-stone-950 font-bold shadow-md shadow-amber-500/20{% else %}bg-stone-800/90 text-stone-300 hover:bg-stone-800 border border-stone-700/60{% endif %}">
+                    <i class="fa-solid fa-chart-simple text-xs"></i>
+                    <span>Engine</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Slide-Over Mobile Drawer Menu -->
+    <div id="mobile-menu-drawer" class="fixed inset-0 z-50 bg-stone-950/80 backdrop-blur-md hidden flex justify-end transition-opacity duration-300" onclick="closeMobileMenu()">
+        <div class="w-full max-w-sm bg-stone-900 border-l border-stone-800 h-full flex flex-col justify-between shadow-2xl p-5 overflow-y-auto" onclick="event.stopPropagation()">
+            
+            <div class="space-y-5">
+                <!-- Drawer Top Bar -->
+                <div class="flex items-center justify-between pb-4 border-b border-stone-800">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+                            <i class="fa-solid fa-sparkles text-xs"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm text-white font-serif">FoodSnap Navigation</h3>
+                            <p class="text-[11px] text-stone-400">Select any section to explore</p>
+                        </div>
+                    </div>
+                    <button onclick="closeMobileMenu()" class="p-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-400 hover:text-white border border-stone-700 transition-colors">
+                        <i class="fa-solid fa-xmark text-base"></i>
+                    </button>
+                </div>
+
+                <!-- Nav Items List in Drawer -->
+                <div class="space-y-2">
+                    <a href="{% url 'home' %}" class="w-full flex items-center justify-between p-3 rounded-2xl text-left transition-all border {% if request.resolver_match.url_name == 'home' %}bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-md shadow-amber-500/10{% else %}bg-stone-950/60 text-stone-300 hover:text-white hover:bg-stone-800/80 border-stone-800/80{% endif %}">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 {% if request.resolver_match.url_name == 'home' %}bg-amber-500 text-stone-950 font-bold{% else %}bg-stone-800 text-stone-300{% endif %}">
+                                <i class="fa-solid fa-camera"></i>
+                            </div>
+                            <div class="truncate">
+                                <div class="text-sm font-bold truncate">Dish Recognition</div>
+                                <div class="text-[11px] text-stone-400 truncate">AI visual recognition from photos &amp; camera</div>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-xs {% if request.resolver_match.url_name == 'home' %}text-amber-400{% else %}text-stone-600{% endif %}"></i>
+                    </a>
+
+                    <a href="{% url 'recipes' %}" class="w-full flex items-center justify-between p-3 rounded-2xl text-left transition-all border {% if request.resolver_match.url_name == 'recipes' %}bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-md shadow-amber-500/10{% else %}bg-stone-950/60 text-stone-300 hover:text-white hover:bg-stone-800/80 border-stone-800/80{% endif %}">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 {% if request.resolver_match.url_name == 'recipes' %}bg-amber-500 text-stone-950 font-bold{% else %}bg-stone-800 text-stone-300{% endif %}">
+                                <i class="fa-solid fa-globe"></i>
+                            </div>
+                            <div class="truncate">
+                                <div class="text-sm font-bold truncate">Global Search</div>
+                                <div class="text-[11px] text-stone-400 truncate">Search hundreds of international heritage recipes</div>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-xs {% if request.resolver_match.url_name == 'recipes' %}text-amber-400{% else %}text-stone-600{% endif %}"></i>
+                    </a>
+
+                    <a href="{% url 'nearby' %}" class="w-full flex items-center justify-between p-3 rounded-2xl text-left transition-all border {% if request.resolver_match.url_name == 'nearby' %}bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-md shadow-amber-500/10{% else %}bg-stone-950/60 text-stone-300 hover:text-white hover:bg-stone-800/80 border-stone-800/80{% endif %}">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 {% if request.resolver_match.url_name == 'nearby' %}bg-amber-500 text-stone-950 font-bold{% else %}bg-stone-800 text-stone-300{% endif %}">
+                                <i class="fa-solid fa-location-dot"></i>
+                            </div>
+                            <div class="truncate">
+                                <div class="text-sm font-bold truncate">Nearby Dining Radar</div>
+                                <div class="text-[11px] text-stone-400 truncate">Find local spots serving recognized dishes</div>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-xs {% if request.resolver_match.url_name == 'nearby' %}text-amber-400{% else %}text-stone-600{% endif %}"></i>
+                    </a>
+
+                    <a href="{% url 'ai_verifier' %}" class="w-full flex items-center justify-between p-3 rounded-2xl text-left transition-all border {% if request.resolver_match.url_name == 'ai_verifier' %}bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-md shadow-amber-500/10{% else %}bg-stone-950/60 text-stone-300 hover:text-white hover:bg-stone-800/80 border-stone-800/80{% endif %}">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 {% if request.resolver_match.url_name == 'ai_verifier' %}bg-amber-500 text-stone-950 font-bold{% else %}bg-stone-800 text-stone-300{% endif %}">
+                                <i class="fa-solid fa-layer-group"></i>
+                            </div>
+                            <div class="truncate">
+                                <div class="text-sm font-bold truncate">Feature Vectors (80-D)</div>
+                                <div class="text-[11px] text-stone-400 truncate">Spatial HSV &amp; color histogram analysis</div>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-xs {% if request.resolver_match.url_name == 'ai_verifier' %}text-amber-400{% else %}text-stone-600{% endif %}"></i>
+                    </a>
+
+                    <a href="{% url 'favorites' %}" class="w-full flex items-center justify-between p-3 rounded-2xl text-left transition-all border {% if request.resolver_match.url_name == 'favorites' %}bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-md shadow-amber-500/10{% else %}bg-stone-950/60 text-stone-300 hover:text-white hover:bg-stone-800/80 border-stone-800/80{% endif %}">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 {% if request.resolver_match.url_name == 'favorites' %}bg-amber-500 text-stone-950 font-bold{% else %}bg-stone-800 text-stone-300{% endif %}">
+                                <i class="fa-solid fa-bookmark"></i>
+                            </div>
+                            <div class="truncate">
+                                <div class="text-sm font-bold truncate">Saved Dishes</div>
+                                <div class="text-[11px] text-stone-400 truncate">Your favorite meals and bookmarks</div>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-xs {% if request.resolver_match.url_name == 'favorites' %}text-amber-400{% else %}text-stone-600{% endif %}"></i>
+                    </a>
+
+                    <a href="{% url 'dashboard' %}" class="w-full flex items-center justify-between p-3 rounded-2xl text-left transition-all border {% if request.resolver_match.url_name == 'dashboard' %}bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-md shadow-amber-500/10{% else %}bg-stone-950/60 text-stone-300 hover:text-white hover:bg-stone-800/80 border-stone-800/80{% endif %}">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 {% if request.resolver_match.url_name == 'dashboard' %}bg-amber-500 text-stone-950 font-bold{% else %}bg-stone-800 text-stone-300{% endif %}">
+                                <i class="fa-solid fa-chart-simple"></i>
+                            </div>
+                            <div class="truncate">
+                                <div class="text-sm font-bold truncate">Classification Engine</div>
+                                <div class="text-[11px] text-stone-400 truncate">Cosine distance metrics &amp; telemetry</div>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-xs {% if request.resolver_match.url_name == 'dashboard' %}text-amber-400{% else %}text-stone-600{% endif %}"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Drawer Bottom Guide Button -->
+            <div class="pt-4 border-t border-stone-800 space-y-2">
+                <button
+                    onclick="closeMobileMenu(); openGuideModal();"
+                    class="w-full py-3 px-4 rounded-2xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs transition-colors flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
+                >
+                    <i class="fa-solid fa-circle-question text-stone-950"></i>
+                    <span>How FoodSnap Works (User Guide)</span>
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Alert / Toast Messages -->
+    {% if messages %}
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 w-full">
+        {% for message in messages %}
+        <div class="p-3.5 rounded-xl text-xs font-medium border flex items-center justify-between gap-3 mb-2 {% if message.tags == 'error' %}bg-rose-950/40 border-rose-500/40 text-rose-200{% elif message.tags == 'success' %}bg-emerald-950/40 border-emerald-500/40 text-emerald-200{% else %}bg-amber-950/40 border-amber-500/40 text-amber-200{% endif %}">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-circle-info"></i>
+                <span>{{ message }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Main Dynamic Content Block -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Global "How FoodSnap Works" User Guide Modal -->
+    <div id="guide-modal" class="fixed inset-0 z-50 bg-stone-950/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="bg-stone-900 border border-stone-800 rounded-3xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6 sm:p-8 space-y-6 shadow-2xl relative" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between pb-4 border-b border-stone-800">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+                        <i class="fa-solid fa-graduation-cap text-lg"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold font-serif text-white">How FoodSnap Works</h2>
+                        <p class="text-xs text-stone-400">Culinary Computer Vision &amp; Recipe Guide</p>
+                    </div>
+                </div>
+                <button onclick="closeGuideModal()" class="p-2 rounded-xl bg-stone-950 text-stone-400 hover:text-white border border-stone-800">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="p-4 rounded-2xl bg-stone-950 border border-stone-800 space-y-2">
+                    <div class="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-sm font-bold font-mono">01</div>
+                    <h3 class="text-sm font-bold text-white">Spatial HSV Decomposition</h3>
+                    <p class="text-xs text-stone-400 leading-relaxed">
+                        Photos are partitioned into a 4×4 spatial grid and converted into 80-dimensional color and saturation feature histograms.
+                    </p>
+                </div>
+
+                <div class="p-4 rounded-2xl bg-stone-950 border border-stone-800 space-y-2">
+                    <div class="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-sm font-bold font-mono">02</div>
+                    <h3 class="text-sm font-bold text-white">Cosine Vector Matching</h3>
+                    <p class="text-xs text-stone-400 leading-relaxed">
+                        Vectors are compared against authentic reference food manifolds in milliseconds, ranking candidates by angular cosine similarity.
+                    </p>
+                </div>
+
+                <div class="p-4 rounded-2xl bg-stone-950 border border-stone-800 space-y-2">
+                    <div class="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-sm font-bold font-mono">03</div>
+                    <h3 class="text-sm font-bold text-white">Step-by-Step Cooking Assistant</h3>
+                    <p class="text-xs text-stone-400 leading-relaxed">
+                        Interactive stage timers, ingredient prep checklists, and culinary tips guide you through cooking every recognized dish.
+                    </p>
+                </div>
+
+                <div class="p-4 rounded-2xl bg-stone-950 border border-stone-800 space-y-2">
+                    <div class="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-sm font-bold font-mono">04</div>
+                    <h3 class="text-sm font-bold text-white">Nearby Restaurant Radar</h3>
+                    <p class="text-xs text-stone-400 leading-relaxed">
+                        Locate physical restaurants and eateries near you that serve the recognized dish with live OpenStreetMap &amp; directions.
+                    </p>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-stone-800 flex justify-end">
+                <button onclick="closeGuideModal()" class="px-6 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs shadow-lg shadow-amber-500/20">
+                    Got it, Let's Start
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="border-t border-stone-800 bg-stone-900 py-6 text-center text-xs text-stone-500 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+                <span class="font-bold text-stone-300 font-serif text-sm">FoodSnap</span>
+                <span>—</span>
+                <span>Intelligent Food Image Recognition &amp; Recipe System</span>
+            </div>
+            <div class="flex items-center gap-4 text-[11px] text-stone-400">
+                <span>Spatial 80-D HSV Model</span>
+                <span>•</span>
+                <span>Cosine Angular Distance</span>
+                <span>•</span>
+                <span>Global Restaurant Radar</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Global Scripts for Mobile Drawer, Modals, and Resilient Image Fallback -->
+    <script>
+        function toggleMobileMenu() {
+            const drawer = document.getElementById('mobile-menu-drawer');
+            const icon = document.getElementById('hamburger-icon');
+            if (drawer.classList.contains('hidden')) {
+                drawer.classList.remove('hidden');
+                icon.className = 'fa-solid fa-xmark text-amber-400 text-base';
+                document.body.style.overflow = 'hidden';
+            } else {
+                closeMobileMenu();
+            }
+        }
+
+        function closeMobileMenu() {
+            const drawer = document.getElementById('mobile-menu-drawer');
+            const icon = document.getElementById('hamburger-icon');
+            drawer.classList.add('hidden');
+            icon.className = 'fa-solid fa-bars text-base';
+            document.body.style.overflow = '';
+        }
+
+        function openGuideModal() {
+            document.getElementById('guide-modal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeGuideModal() {
+            document.getElementById('guide-modal').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        // Resilient Global Image Fallback Pipeline
+        const CULINARY_FALLBACKS = {
+            'jollof': 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1200&q=80',
+            'amala': 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1200&q=80',
+            'egusi': 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1200&q=80',
+            'suya': 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=1200&q=80',
+            'chicken': 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=1200&q=80',
+            'salad': 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1200&q=80',
+            'pasta': 'https://images.unsplash.com/photo-1621996346565-e3d5d6281290?auto=format&fit=crop&w=1200&q=80',
+            'default': 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1200&q=80'
+        };
+
+        document.addEventListener('error', function(e) {
+            if (e.target.tagName === 'IMG') {
+                const img = e.target;
+                if (!img.getAttribute('data-has-failed')) {
+                    img.setAttribute('data-has-failed', 'true');
+                    const alt = (img.alt || '').toLowerCase();
+                    let chosen = CULINARY_FALLBACKS.default;
+                    for (const [key, url] of Object.entries(CULINARY_FALLBACKS)) {
+                        if (alt.includes(key)) {
+                            chosen = url;
+                            break;
+                        }
+                    }
+                    img.src = chosen;
+                }
+            }
+        }, true);
+    </script>
+</body>
+</html>

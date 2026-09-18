@@ -1,0 +1,81 @@
+{% extends "main/base.html" %}
+{% load static %}
+
+{% block title %}Authentic Dish Image Analysis &amp; Visual Verifier — FoodSnap{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Verifier Intro Header -->
+    <div class="bg-stone-900 border border-stone-800 rounded-3xl p-6 sm:p-8 space-y-4 shadow-xl">
+        <div class="space-y-2">
+            <div class="flex items-center gap-2">
+                <span class="px-3 py-1 rounded-full text-xs font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                    Visual Hallmark &amp; Authenticity Inspector
+                </span>
+                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-mono text-stone-400 bg-stone-950 border border-stone-800">
+                    80-Dim Spatial HSV Manifold
+                </span>
+            </div>
+            <h1 class="text-2xl sm:text-4xl font-extrabold font-serif text-white tracking-tight">
+                Authentic Food Image &amp; Manifold Verifier
+            </h1>
+            <p class="text-xs sm:text-sm text-stone-400 leading-relaxed max-w-3xl">
+                Explore verified authentic photo references, visual hallmarks, culinary definitions, and regional preparation standards extracted from our reference dataset.
+            </p>
+        </div>
+    </div>
+
+    <!-- Verified Dishes Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for key, dish in dataset.items %}
+        <div class="bg-stone-900 border border-stone-800 hover:border-amber-500/40 rounded-3xl p-6 space-y-4 shadow-lg flex flex-col justify-between transition-all group">
+            
+            <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold text-white font-serif group-hover:text-amber-400 transition-colors">{{ dish.name }}</h3>
+                    <span class="px-2.5 py-1 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold font-mono">
+                        {{ dish.authenticityScore }}% Authentic
+                    </span>
+                </div>
+
+                <!-- Reference Image Container with Fallback -->
+                <div class="rounded-2xl overflow-hidden aspect-video bg-stone-950 border border-stone-800 relative">
+                    <img src="{{ dish.verifiedWebUrl }}" alt="{{ dish.name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onerror="this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80'">
+                    <span class="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/70 text-[10px] font-mono text-stone-300 border border-white/10">
+                        Ground Truth Ref
+                    </span>
+                </div>
+
+                <p class="text-xs text-stone-300 leading-relaxed">{{ dish.culinaryNotes }}</p>
+
+                <div class="space-y-1.5 pt-2 border-t border-stone-800/80">
+                    <span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">Visual Hallmarks:</span>
+                    <ul class="text-xs text-stone-400 space-y-1">
+                        {% for h in dish.visualHallmarks %}
+                        <li class="flex items-start gap-1.5">
+                            <i class="fa-solid fa-check text-amber-400 mt-1 text-[10px] shrink-0"></i>
+                            <span>{{ h }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+
+            <div class="pt-3 border-t border-stone-800/80 flex items-center justify-between gap-3">
+                <a href="{% url 'cook' key %}" class="text-xs font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1 transition-colors">
+                    <span>Cook Step-by-Step</span>
+                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                </a>
+                <a href="{% url 'nearby' %}?q={{ dish.name|urlencode }}" class="text-xs font-semibold text-stone-400 hover:text-white flex items-center gap-1 transition-colors">
+                    <i class="fa-solid fa-location-dot text-amber-500"></i>
+                    <span>Find Restaurants</span>
+                </a>
+            </div>
+
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+{% endblock %}

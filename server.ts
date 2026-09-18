@@ -185,6 +185,90 @@ const AUTHENTIC_IMAGE_DATABASE: Record<string, {
     authenticityScore: 96,
     visualHallmarks: ['Crisp romaine and iceberg leaves', 'Sliced English cucumbers and ruby cherry tomatoes', 'Golden boiled egg wedges and sweetcorn'],
     culinaryNotes: 'Vibrant chilled fresh produce composed on a platter with light vinaigrette.'
+  },
+  'ogbono-soup': {
+    name: 'Ogbono Soup',
+    originalDatasetUrl: '/dataset/images/ogbono-soup.jpg',
+    verifiedWebUrl: '/dataset/images/ogbono-soup.jpg',
+    authenticityScore: 99,
+    visualHallmarks: [
+      'Viscous mucilaginous draw consistency from wild mango seeds (Irvingia gabonensis)',
+      'Rich red-orange palm oil soup base with shredded ugu leaves or bitterleaf',
+      'Assorted braised beef, smoked catfish, stockfish, and ground crayfish'
+    ],
+    culinaryNotes: 'Celebrated Nigerian draw soup prepared by dissolving milled ogbono seeds in palm oil and simmering with rich meat stock and aromatic spices.'
+  },
+  'banga-soup': {
+    name: 'Banga Soup',
+    originalDatasetUrl: '/dataset/images/banga-soup.jpg',
+    verifiedWebUrl: '/dataset/images/banga-soup.jpg',
+    authenticityScore: 98,
+    visualHallmarks: [
+      'Deep oily orange-red palm fruit extract broth',
+      'Aromatic beletiete and oburunbebe stick infusion',
+      'Fresh catfish and starch swallow accompaniment'
+    ],
+    culinaryNotes: 'Niger Delta delicacy crafted from concentrated fresh palm nut pulp, spiced with native aromatics.'
+  },
+  'afang-soup': {
+    name: 'Afang Soup',
+    originalDatasetUrl: '/dataset/images/afang-soup.jpg',
+    verifiedWebUrl: '/dataset/images/afang-soup.jpg',
+    authenticityScore: 98,
+    visualHallmarks: [
+      'Finely pounded dark green Okazi / Afang leaves with glossy waterleaf',
+      'Abundant shelled periwinkles and smoked seafood',
+      'Deep green leafy texture with palm oil sheen'
+    ],
+    culinaryNotes: 'Traditional Efik / Ibibio soup rich in dietary fiber from pounded Gnetum africanum leaves.'
+  },
+  'pepper-soup': {
+    name: 'Pepper Soup',
+    originalDatasetUrl: '/dataset/images/pepper-soup.jpg',
+    verifiedWebUrl: '/dataset/images/pepper-soup.jpg',
+    authenticityScore: 98,
+    visualHallmarks: [
+      'Clear, spicy, aromatic dark broth with glistening pepper oil droplets',
+      'Whole cuts of fresh catfish or tender goat meat',
+      'Ground African nutmeg (ehuru) and uda pod seasoning'
+    ],
+    culinaryNotes: 'Spicy medicinal West African broth infused with wild pepper herbs, ginger, and hot scotch bonnet.'
+  },
+  'waakye': {
+    name: 'Waakye',
+    originalDatasetUrl: '/dataset/images/waakye.jpg',
+    verifiedWebUrl: '/dataset/images/waakye.jpg',
+    authenticityScore: 99,
+    visualHallmarks: [
+      'Burgundy-tinted rice and black-eyed peas cooked with red sorghum leaf sheaths',
+      'Served with dark spicy shito pepper sauce and spaghetti (talia)',
+      'Accompanying wele (cowhide), fried plantain, and boiled egg'
+    ],
+    culinaryNotes: 'Beloved Ghanaian street food of rice and beans enriched with mineral-rich sorghum stalks.'
+  },
+  'thieboudienne': {
+    name: 'Thieboudienne',
+    originalDatasetUrl: '/dataset/images/thieboudienne.jpg',
+    verifiedWebUrl: '/dataset/images/thieboudienne.jpg',
+    authenticityScore: 99,
+    visualHallmarks: [
+      'Rich reddish-orange seasoned broken rice (ceebu jën)',
+      'Whole herb-stuffed white fish (thiof) cooked in tomato reduction',
+      'Large braised cassava, carrots, cabbage, and tamarind / hibiscus sauce'
+    ],
+    culinaryNotes: 'The national dish of Senegal, known as the culinary predecessor of Jollof rice.'
+  },
+  'akara': {
+    name: 'Akara',
+    originalDatasetUrl: '/dataset/images/akara.jpg',
+    verifiedWebUrl: '/dataset/images/akara.jpg',
+    authenticityScore: 98,
+    visualHallmarks: [
+      'Golden crisp deep-fried bean fritters with tender airy interior',
+      'Flecks of minced red onion and scotch bonnet',
+      'Served with warm pap (ogi) or fresh agege bread'
+    ],
+    culinaryNotes: 'Iconic street food fritters whipped from peeled black-eyed peas and fried to golden perfection.'
   }
 };
 
@@ -192,7 +276,179 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json());
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+  // AI Multimodal Food Image Recognition (Gemini Vision)
+  app.post('/api/ai/recognize-food', async (req, res) => {
+    try {
+      const { image } = req.body;
+      if (!image || typeof image !== 'string') {
+        return res.status(400).json({ error: 'Image data is required' });
+      }
+
+      let mimeType = 'image/jpeg';
+      let base64Data = '';
+
+      if (image.startsWith('data:')) {
+        const match = image.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/);
+        if (match) {
+          mimeType = match[1];
+          base64Data = match[2];
+        } else {
+          const parts = image.split(',');
+          if (parts.length === 2) {
+            base64Data = parts[1];
+          }
+        }
+      } else if (image.startsWith('http://') || image.startsWith('https://')) {
+        try {
+          const fetched = await fetch(image);
+          if (fetched.ok) {
+            const buf = await fetched.arrayBuffer();
+            base64Data = Buffer.from(buf).toString('base64');
+            mimeType = fetched.headers.get('content-type') || 'image/jpeg';
+          }
+        } catch (fetchErr) {
+          console.warn('Image fetch failed in recognize-food:', fetchErr);
+        }
+      }
+
+      const key = process.env.GEMINI_API_KEY?.trim();
+      if (!key || key === 'MY_GEMINI_API_KEY' || !base64Data) {
+        return res.json({
+          success: false,
+          fallback: true,
+          message: 'AI API unavailable or unconfigured, using local vector matching'
+        });
+      }
+
+      const prompt = `You are a world-leading culinary recognition AI specializing in African, West African, and international gastronomy.
+Analyze this food photograph and identify the EXACT dish shown with absolute precision.
+
+CRITICAL DISH RECOGNITION RULES & DIFFERENTIATION:
+- OGBONO SOUP:
+  - Visuals: Thick, viscous, mucilaginous, drawing soup consistency from ground Irvingia gabonensis seeds.
+  - Appearance: Glossy palm-oil orange-red/brown base, shredded dark green ugu (fluted pumpkin) leaves or bitterleaf, chunks of assorted meats (beef, shaki/tripe), smoked catfish, stockfish. Often in a soup bowl or next to swallow.
+  - WARNING: It is NEVER Chin Chin! Chin Chin is a dry crunchy baked/fried pastry snack cube!
+- EGUSI SOUP:
+  - Visuals: Golden yellow textured curds/lumps of ground melon seeds, red palm oil, leafy spinach/ugu, braised meats.
+- JOLLOF RICE:
+  - Visuals: Vibrant reddish-orange long grain rice seasoned with blended tatashe peppers, tomatoes, and thyme.
+- SUYA:
+  - Visuals: Thin sliced grilled beef skewers with dark grill marks, coated in coarse reddish-brown yaji peanut-chili spice, sliced red onions.
+- EFO RIRO:
+  - Visuals: Dark emerald green vegetable stew packed with shredded shoko/tete greens, iru (locust beans), and fried pepper reduction.
+- MOIN MOIN:
+  - Visuals: Steamed orange-red bean pudding loaf made from peeled black-eyed peas, wrapped in leaf or container.
+- AMALA:
+  - Visuals: Smooth, velvety dark brown/black swallow made from fermented yam flour (elubo), typically served with Ewedu or Gbegiri soup.
+- POUNDED YAM:
+  - Visuals: Silky, elastic, alabaster-white swallow mound.
+- CHIN CHIN:
+  - Visuals: Dry, small bite-sized crunchy golden-brown pastry cubes/strips (like cookies/biscuits). Snack food.
+- AFANG SOUP:
+  - Visuals: Finely shredded dark green okazi/afang leaves with waterleaf, periwinkles, and meat in palm oil.
+- BANGA SOUP:
+  - Visuals: Heavy orange-red palm nut extract soup seasoned with beletiete and dried fish.
+- PEPPER SOUP:
+  - Visuals: Clear, spicy, dark aromatic broth with fresh fish or goat meat cuts.
+- WAAKYE:
+  - Visuals: Burgundy-colored rice and cowpeas cooked with red sorghum leaf sheaths, served with black shito sauce.
+- THIEBOUDIENNE:
+  - Visuals: Broken rice simmered in red tomato sauce with stuffed fish and large root vegetables.
+- AKARA:
+  - Visuals: Golden brown fried bean puffs/fritters.
+
+If the photo is another authentic dish, identify it accurately.
+
+Return strict JSON only (no markdown, no backticks):
+{
+  "dishName": "Ogbono Soup",
+  "recipeId": "ogbono-soup",
+  "confidence": 98.4,
+  "category": "Soups & Stews",
+  "origin": "Nigeria / West Africa",
+  "detectedVisualCues": [
+    "Viscous mucilaginous draw texture characteristic of Irvingia gabonensis",
+    "Glossy palm oil soup base with shredded green ugu leaves",
+    "Smoked catfish and assorted braised meats"
+  ],
+  "visibleIngredients": [
+    "Ogbono seeds",
+    "Palm oil",
+    "Ugu leaves",
+    "Assorted meat & smoked fish"
+  ],
+  "culinaryNotes": "Authentic Nigerian draw soup celebrated for its silky texture and rich meat stock infusion.",
+  "alternativeCandidates": [
+    { "dishName": "Egusi Soup", "recipeId": "egusi-soup", "confidence": 12.5 },
+    { "dishName": "Afang Soup", "recipeId": "afang-soup", "confidence": 8.0 }
+  ]
+}`;
+
+      let aiResponseText = '';
+      const candidateModels = ['gemini-3.8-flash', 'gemini-flash-latest'];
+
+      for (const model of candidateModels) {
+        try {
+          const response = await ai.models.generateContent({
+            model,
+            contents: [
+              {
+                role: 'user',
+                parts: [
+                  {
+                    inlineData: {
+                      mimeType,
+                      data: base64Data
+                    }
+                  },
+                  {
+                    text: prompt
+                  }
+                ]
+              }
+            ],
+            config: {
+              responseMimeType: 'application/json'
+            }
+          });
+
+          if (response.text) {
+            aiResponseText = response.text;
+            break;
+          }
+        } catch (modelErr: any) {
+          console.warn(`Vision model ${model} attempt failed:`, modelErr?.message || modelErr);
+        }
+      }
+
+      if (!aiResponseText) {
+        return res.json({
+          success: false,
+          fallback: true,
+          message: 'Vision model did not return text'
+        });
+      }
+
+      // Parse JSON safely
+      const cleanJson = aiResponseText.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
+      const parsed = JSON.parse(cleanJson);
+
+      return res.json({
+        success: true,
+        ...parsed
+      });
+    } catch (err: any) {
+      console.error('Food recognition endpoint error:', err);
+      return res.json({
+        success: false,
+        fallback: true,
+        error: err.message || 'Vision recognition failed'
+      });
+    }
+  });
 
   // Healthcheck endpoint
   app.get('/api/health', (req, res) => {

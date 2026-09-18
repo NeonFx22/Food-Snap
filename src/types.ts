@@ -111,3 +111,24 @@ export interface BenchmarkResult {
   avgLatencyMs: number;
   itemResults?: BenchmarkItemResult[];
 }
+
+export interface DatasetClassInfo {
+  id: string;
+  name: string;
+  category: string;
+  region: string;
+  kaggleSource: string;
+  sampleCount: number;
+  trainCount?: number;
+  valCount?: number;
+  testCount?: number;
+  authenticityScore: number;
+  visualHallmarks: string[];
+  culinaryNotes: string;
+  keySpices?: string[];
+  imageUrls: string[];
+  primaryImageUrl: string;
+  vectorDimensions: number;
+  dominantColors: string[];
+  averagePreparationTime: string;
+}

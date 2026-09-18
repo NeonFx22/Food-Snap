@@ -1,0 +1,90 @@
+{
+    "amala": {
+        "name": "Amala",
+        "originalDatasetUrl": "/dataset/images/amala.jpg",
+        "verifiedWebUrl": "/dataset/images/amala.jpg",
+        "authenticityScore": 99,
+        "visualHallmarks": ["Velvety dark brown yam flour swallow (Amala isu)", "Served with Ewedu and Gbegiri soup", "Silky dark consistency"],
+        "culinaryNotes": "Traditional Yoruba swallow made from dried yam flour (elubo), whipped in hot water to dark velvet consistency."
+    },
+    "jollof-rice": {
+        "name": "Jollof Rice",
+        "originalDatasetUrl": "/dataset/images/jollof-rice.jpg",
+        "verifiedWebUrl": "/dataset/images/jollof-rice.jpg",
+        "authenticityScore": 99,
+        "visualHallmarks": ["Glossy smoky orange-red long grain rice", "Roasted red bell pepper reduction", "Party-style bottom-pot caramelization"],
+        "culinaryNotes": "Distinct grains coated in reduced tomato-tatashe paste with thyme and bay aromatics."
+    },
+    "egusi-soup": {
+        "name": "Egusi Soup",
+        "originalDatasetUrl": "/dataset/images/egusi-soup.jpg",
+        "verifiedWebUrl": "/dataset/images/egusi-soup.jpg",
+        "authenticityScore": 98,
+        "visualHallmarks": ["Golden melon seed curds/lumps", "Rich red palm oil separation", "Braised assorted meats and ugu greens"],
+        "culinaryNotes": "Textured melon seed protein cakes simmered in palm oil with stockfish and leafy greens."
+    },
+    "suya": {
+        "name": "Suya",
+        "originalDatasetUrl": "/dataset/images/suya.jpg",
+        "verifiedWebUrl": "/dataset/images/suya.jpg",
+        "authenticityScore": 99,
+        "visualHallmarks": ["Thinly sliced skewered beef with char marks", "Yaji kuli-kuli peanut spice dusting", "Sliced red onions and fresh tomatoes"],
+        "culinaryNotes": "Open-flame charcoal grilled beef dusted with authentic Northern Nigerian yaji pepper."
+    },
+    "efo-riro": {
+        "name": "Efo Riro",
+        "originalDatasetUrl": "/dataset/images/efo-riro.jpg",
+        "verifiedWebUrl": "/dataset/images/efo-riro.jpg",
+        "authenticityScore": 97,
+        "visualHallmarks": ["Rich emerald green shredded spinach/shoko", "Aromatic palm oil pepper base", "Smoked catfish and tender tripe"],
+        "culinaryNotes": "Yoruba vegetable stew prepared by tossing greens into seasoned fried pepper reduction."
+    },
+    "moin-moin": {
+        "name": "Moin Moin",
+        "originalDatasetUrl": "/dataset/images/moi-moi.jpg",
+        "verifiedWebUrl": "/dataset/images/moi-moi.jpg",
+        "authenticityScore": 98,
+        "visualHallmarks": ["Steamed golden-orange bean pudding loaf", "Smooth silky texture", "Hard-boiled egg or fish slice inclusion"],
+        "culinaryNotes": "Pureed peeled black-eyed peas steamed in banana leaves or ramekins with peppers and crayfish."
+    },
+    "chin-chin": {
+        "name": "Chin Chin",
+        "originalDatasetUrl": "/dataset/images/chin-chin.jpg",
+        "verifiedWebUrl": "/dataset/images/chin-chin.jpg",
+        "authenticityScore": 99,
+        "visualHallmarks": ["Crispy golden-brown cube pastries", "Nutmeg-infused sugar glaze", "Uniform snack-sized crunch"],
+        "culinaryNotes": "Deep-fried West African pastry cubes seasoned with grated nutmeg and butter."
+    },
+    "pounded-yam": {
+        "name": "Pounded Yam",
+        "originalDatasetUrl": "/dataset/images/pounded-yam.jpg",
+        "verifiedWebUrl": "/dataset/images/pounded-yam.jpg",
+        "authenticityScore": 99,
+        "visualHallmarks": ["Silky alabaster white swallow mound", "Pliable elastic texture", "Molded sphere serving presentation"],
+        "culinaryNotes": "Steamed African white yam pounded in a mortar until starchy, stretchy, and pillowy."
+    },
+    "spaghetti-bolognese": {
+        "name": "Spaghetti Bolognese",
+        "originalDatasetUrl": "/dataset/images/spaghetti-bolognese.jpg",
+        "verifiedWebUrl": "/dataset/images/spaghetti-bolognese.jpg",
+        "authenticityScore": 98,
+        "visualHallmarks": ["Al dente pasta strands", "Rich slow-cooked minced beef ragu", "Parmigiano-Reggiano dusting"],
+        "culinaryNotes": "Classic Italian ragù alla bolognese clinging to long pasta with fresh basil accents."
+    },
+    "grilled-chicken": {
+        "name": "Grilled Chicken",
+        "originalDatasetUrl": "/dataset/images/grilled-chicken.jpg",
+        "verifiedWebUrl": "/dataset/images/grilled-chicken.jpg",
+        "authenticityScore": 97,
+        "visualHallmarks": ["Golden-brown charred skin", "Herb and paprika spice rub", "Juicy bone-in roast presentation"],
+        "culinaryNotes": "Flame-roasted seasoned poultry with caramelized exterior and tender interior."
+    },
+    "vegetable-salad": {
+        "name": "Vegetable Salad",
+        "originalDatasetUrl": "/dataset/images/vegetable-salad.jpg",
+        "verifiedWebUrl": "/dataset/images/vegetable-salad.jpg",
+        "authenticityScore": 96,
+        "visualHallmarks": ["Crisp romaine and iceberg leaves", "Sliced English cucumbers and ruby cherry tomatoes", "Golden boiled egg wedges and sweetcorn"],
+        "culinaryNotes": "Vibrant chilled fresh produce composed on a platter with light vinaigrette."
+    }
+}

@@ -1,0 +1,14 @@
+# Core runtime dependencies
+Django>=4.2,<6.0
+Pillow>=10.0
+numpy>=1.24
+beautifulsoup4>=4.12
+requests>=2.31
+whitenoise>=6.6
+gunicorn>=21.0
+
+# Optional:
+#   - Deep-learning encoding / fine-tuning (needs Python 3.12 or older):
+#       tensorflow>=2.13
+#   - Fast nearest-neighbor search on large datasets:
+#       faiss-cpu>=1.7

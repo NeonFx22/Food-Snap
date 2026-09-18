@@ -1,0 +1,79 @@
+[
+  {
+    "name": "jollof rice",
+    "calories": "450 kcal per serving",
+    "cooking_time": "45 minutes",
+    "ingredients": "Rice, tomatoes, red bell pepper, onions, tomato paste, vegetable oil, chicken or beef stock, curry powder, thyme, bay leaves, salt",
+    "directions": "Blend tomatoes, pepper and onion. Fry the blended mix in oil with tomato paste until reduced. Add stock, curry, thyme and bay leaves. Stir in washed rice, cover and simmer on low heat until rice is tender, stirring occasionally to prevent burning."
+  },
+  {
+    "name": "egusi soup",
+    "calories": "520 kcal per serving",
+    "cooking_time": "1 hour",
+    "ingredients": "Ground egusi (melon seeds), palm oil, leafy greens (ugu or spinach), assorted meat, stockfish, crayfish, pepper, onions, seasoning cubes",
+    "directions": "Boil the meat and stockfish with onions and seasoning until tender. Heat palm oil, add crayfish and pepper, then fold in the ground egusi in lumps. Add the meat stock gradually, simmer, then stir in the leafy greens and cook for a few more minutes."
+  },
+  {
+    "name": "moin moin",
+    "calories": "300 kcal per serving",
+    "cooking_time": "1 hour",
+    "ingredients": "Peeled black-eyed beans, red bell pepper, onions, palm oil, eggs (optional), crayfish, seasoning cubes, salt",
+    "directions": "Blend the beans with pepper and onion into a smooth paste. Mix in palm oil, crayfish and seasoning. Pour into moulds or foil wraps and steam over boiling water for about 45-60 minutes until firm."
+  },
+  {
+    "name": "suya",
+    "calories": "380 kcal per serving",
+    "cooking_time": "30 minutes",
+    "ingredients": "Beef or chicken strips, roasted ground peanuts, ginger, garlic, cayenne pepper, paprika, onions, vegetable oil",
+    "directions": "Mix ground peanuts with the spices to make suya spice (yaji). Coat the meat strips in oil then rub generously with the spice mix. Skewer the meat and grill over open flame, turning until cooked through and slightly charred."
+  },
+  {
+    "name": "pounded yam",
+    "calories": "350 kcal per serving",
+    "cooking_time": "40 minutes",
+    "ingredients": "Yam tubers, water",
+    "directions": "Peel and cut the yam into chunks, then boil until very soft. Pound in a mortar (or blend in batches) while adding a little hot water, until smooth and stretchy. Shape into balls and serve with soup."
+  },
+  {
+    "name": "efo riro",
+    "calories": "410 kcal per serving",
+    "cooking_time": "50 minutes",
+    "ingredients": "Spinach or efo shoko, palm oil, peppers, onions, assorted meat, smoked fish, crayfish, locust beans (iru), seasoning cubes",
+    "directions": "Boil the meat and fish until tender. Heat palm oil and fry the blended pepper and onion mix until reduced. Add the meat stock, crayfish and locust beans, then stir in the chopped leafy greens and simmer briefly."
+  },
+  {
+    "name": "chin chin",
+    "calories": "480 kcal per serving",
+    "cooking_time": "40 minutes",
+    "ingredients": "Flour, sugar, butter, eggs, milk, nutmeg, baking powder, vegetable oil for frying",
+    "directions": "Mix the dry ingredients, then rub in the butter. Add eggs and milk to form a firm dough. Roll out, cut into small cubes, and deep fry in batches over medium heat until golden and crunchy."
+  },
+  {
+    "name": "spaghetti bolognese",
+    "calories": "500 kcal per serving",
+    "cooking_time": "35 minutes",
+    "ingredients": "Spaghetti, ground beef, tomatoes, onions, garlic, tomato paste, olive oil, basil, oregano, parmesan cheese",
+    "directions": "Cook the spaghetti according to package instructions. Brown the ground beef with onions and garlic, add tomatoes, tomato paste and herbs, and simmer into a rich sauce. Serve the sauce over the spaghetti with grated parmesan."
+  },
+  {
+    "name": "grilled chicken",
+    "calories": "350 kcal per serving",
+    "cooking_time": "30 minutes",
+    "ingredients": "Chicken pieces, olive oil, garlic, lemon juice, paprika, thyme, salt, pepper",
+    "directions": "Marinate the chicken in olive oil, garlic, lemon juice and spices for at least 30 minutes. Grill over medium-high heat, turning occasionally, until cooked through and nicely charred."
+  },
+  {
+    "name": "vegetable salad",
+    "calories": "220 kcal per serving",
+    "cooking_time": "15 minutes",
+    "ingredients": "Lettuce, cucumber, tomatoes, carrots, sweet corn, boiled eggs, salad dressing",
+    "directions": "Wash and chop all vegetables. Combine in a large bowl with sliced boiled eggs. Toss with your preferred salad dressing just before serving."
+  },
+  {
+    "name": "amala",
+    "calories": "420 kcal per serving",
+    "cooking_time": "25 minutes",
+    "ingredients": "Yam flour (elubo), hot boiling water, ewedu leaves, potash/kaun, ground crayfish, iru (locust beans), gbegiri bean soup, assorted meat and stew",
+    "directions": "Bring water to a vigorous boil. Slowly whisk in yam flour (elubo) using an omorogun (wooden turning stick) to eliminate lumps. Stir and fold continuously until dark, stretchy, and velvety smooth. Cover and steam for 5 minutes with a splash of water, then fold again. Serve with jute leaf (ewedu) soup and savory stew."
+  }
+]
