@@ -1,0 +1,6 @@
+{
+  "name": "FoodSnap",
+  "description": "AI food image-to-recipe recognition and culinary system matching dish photos with recipes, interactive cooking guides, and nearby restaurant locators.",
+  "requestFramePermissions": ["camera", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
