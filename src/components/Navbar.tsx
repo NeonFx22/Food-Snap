@@ -14,8 +14,13 @@ import {
   ChevronRight,
   Utensils,
   Database,
-  Cpu
+  Cpu,
+  User as UserIcon,
+  LogIn,
+  LogOut,
+  UserPlus
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export type ActiveTab = 'scanner' | 'results' | 'datasets' | 'loading' | 'global' | 'restaurants' | 'recipes' | 'visualizer' | 'saved' | 'stats';
 
@@ -27,6 +32,8 @@ interface NavbarProps {
   recipesCount: number;
   hasResults?: boolean;
   onOpenGuide?: () => void;
+  onOpenAuth?: (mode?: 'signin' | 'signup') => void;
+  onOpenProfile?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -36,9 +43,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   historyCount,
   recipesCount,
   hasResults = false,
-  onOpenGuide
+  onOpenGuide,
+  onOpenAuth,
+  onOpenProfile
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { user, userProfile, logout } = useAuth();
 
   const navItems = [
     {
@@ -189,10 +199,45 @@ export const Navbar: React.FC<NavbarProps> = ({
                 })}
               </nav>
 
+              {/* Auth / Profile Button (Desktop) */}
+              <div className="hidden sm:flex items-center">
+                {user || userProfile ? (
+                  <button
+                    onClick={onOpenProfile}
+                    className="flex items-center gap-2 py-1.5 px-3 rounded-xl bg-stone-850 hover:bg-stone-800 border border-stone-700 text-stone-200 text-xs font-medium transition-all shadow-sm group"
+                    title="Account & Profile"
+                  >
+                    {user?.photoURL || userProfile?.photoURL ? (
+                      <img 
+                        src={user?.photoURL || userProfile?.photoURL} 
+                        alt="Profile" 
+                        referrerPolicy="no-referrer"
+                        className="w-5 h-5 rounded-full object-cover border border-amber-400"
+                      />
+                    ) : (
+                      <div className="w-5 h-5 rounded-full bg-amber-500 text-stone-950 text-[10px] font-bold flex items-center justify-center">
+                        {(userProfile?.displayName || user?.displayName || user?.email || 'U')[0].toUpperCase()}
+                      </div>
+                    )}
+                    <span className="max-w-[100px] truncate text-stone-200 group-hover:text-amber-300">
+                      {userProfile?.displayName || user?.displayName || 'Chef'}
+                    </span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => onOpenAuth?.('signin')}
+                    className="flex items-center gap-1.5 py-1.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 text-xs font-bold transition-all shadow-sm"
+                  >
+                    <LogIn className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <span>Sign In</span>
+                  </button>
+                )}
+              </div>
+
               {/* Mobile Menu Toggle Button */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="lg:hidden p-2.5 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 hover:text-white border border-stone-700 transition-colors flex items-center justify-center min-h-[42px] min-w-[42px]"
+                className="lg:hidden p-2.5 rounded-xl bg-stone-800 hover:bg-stone-750 text-stone-200 hover:text-white border border-stone-700 transition-colors flex items-center justify-center min-h-[42px] min-w-[42px]"
                 aria-label="Toggle Navigation Menu"
               >
                 {isMobileMenuOpen ? <X className="w-5 h-5 text-amber-400" /> : <Menu className="w-5 h-5" />}
@@ -259,6 +304,74 @@ export const Navbar: React.FC<NavbarProps> = ({
                 >
                   <X className="w-5 h-5" />
                 </button>
+              </div>
+
+              {/* Mobile User Profile or Login Box */}
+              <div className="bg-stone-950/80 border border-stone-800 p-3.5 rounded-2xl">
+                {user || userProfile ? (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {user?.photoURL || userProfile?.photoURL ? (
+                        <img 
+                          src={user?.photoURL || userProfile?.photoURL} 
+                          alt="Profile" 
+                          referrerPolicy="no-referrer"
+                          className="w-10 h-10 rounded-xl object-cover border border-amber-400"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-xl bg-amber-500 text-stone-950 font-serif font-bold text-base flex items-center justify-center shadow">
+                          {(userProfile?.displayName || user?.displayName || user?.email || 'U')[0].toUpperCase()}
+                        </div>
+                      )}
+                      <div className="truncate">
+                        <div className="text-xs font-bold text-white truncate">
+                          {userProfile?.displayName || user?.displayName || 'Culinary Foodie'}
+                        </div>
+                        <div className="text-[11px] text-stone-400 truncate">
+                          {user?.email || userProfile?.email || 'Cloud Member'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        onOpenProfile?.();
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-stone-800 hover:bg-stone-700 border border-stone-700 text-amber-300 text-xs font-semibold whitespace-nowrap"
+                    >
+                      View Profile
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="text-xs text-stone-300">
+                      Sign in to synchronize your favorite dishes and scans across all devices.
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          onOpenAuth?.('signin');
+                        }}
+                        className="flex-1 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow"
+                      >
+                        <LogIn className="w-3.5 h-3.5" />
+                        Sign In
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          onOpenAuth?.('signup');
+                        }}
+                        className="flex-1 py-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 border border-stone-700 font-medium text-xs flex items-center justify-center gap-1.5"
+                      >
+                        <UserPlus className="w-3.5 h-3.5" />
+                        Register
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Nav List */}

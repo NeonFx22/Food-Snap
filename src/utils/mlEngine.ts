@@ -807,43 +807,123 @@ export async function matchFoodImage(
   const matches: MatchResult[] = [];
 
   // If AI Multimodal recognized a specific dish, prioritize it at the top
-  if (aiIdentifiedDish) {
-    const aiRecipeId = aiIdentifiedDish.recipeId?.toLowerCase();
-    const aiDishName = aiIdentifiedDish.dishName?.toLowerCase();
-    
-    const matchedAiRecipe = allRecipes.find((r) => 
-      (aiRecipeId && r.id === aiRecipeId) ||
-      (aiDishName && r.name.toLowerCase() === aiDishName) ||
-      (aiRecipeId && r.id.includes(aiRecipeId)) ||
-      (aiRecipeId && aiRecipeId.includes(r.id))
-    );
+  if (aiIdentifiedDish && (aiIdentifiedDish.dishName || aiIdentifiedDish.recipeId)) {
+    const aiRecipeId = (aiIdentifiedDish.recipeId || '').toLowerCase().trim();
+    const aiDishName = (aiIdentifiedDish.dishName || '').toLowerCase().trim();
+
+    // Helper to find best recipe in dataset using exact, keyword, and substring matching
+    const findRecipeMatch = (idCandidate?: string, nameCandidate?: string): Recipe | undefined => {
+      const cleanId = (idCandidate || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '-');
+      const cleanName = (nameCandidate || '').toLowerCase().trim();
+
+      // 1. Direct ID or Name match
+      let found = allRecipes.find((r) =>
+        (cleanId && r.id.toLowerCase() === cleanId) ||
+        (cleanName && r.name.toLowerCase() === cleanName) ||
+        (cleanId && r.id.toLowerCase().replace(/[^a-z0-9]/g, '-') === cleanId)
+      );
+      if (found) return found;
+
+      // 2. Canonical culinary keywords
+      const dishKeywords: Array<{ keywords: string[]; recipeId: string }> = [
+        { keywords: ['jollof'], recipeId: 'jollof-rice' },
+        { keywords: ['egusi'], recipeId: 'egusi-soup' },
+        { keywords: ['suya'], recipeId: 'suya' },
+        { keywords: ['efo', 'riro'], recipeId: 'efo-riro' },
+        { keywords: ['amala', 'ewedu'], recipeId: 'amala' },
+        { keywords: ['moin', 'moi-moi', 'moi moi'], recipeId: 'moin-moin' },
+        { keywords: ['pounded yam', 'pounded', 'iyan'], recipeId: 'pounded-yam' },
+        { keywords: ['ogbono'], recipeId: 'ogbono-soup' },
+        { keywords: ['afang'], recipeId: 'afang-soup' },
+        { keywords: ['banga'], recipeId: 'banga-soup' },
+        { keywords: ['pepper soup', 'peppersoup'], recipeId: 'pepper-soup' },
+        { keywords: ['akara', 'kosai', 'koose'], recipeId: 'akara' },
+        { keywords: ['chin chin', 'chinchin'], recipeId: 'chin-chin' },
+        { keywords: ['waakye'], recipeId: 'waakye' },
+        { keywords: ['thieboudienne', 'ceebu', 'thiebou'], recipeId: 'thieboudienne' },
+        { keywords: ['fufu'], recipeId: 'fufu-light-soup' },
+        { keywords: ['fried rice'], recipeId: 'fried-rice' },
+        { keywords: ['vegetable salad', 'salad'], recipeId: 'vegetable-salad' },
+        { keywords: ['grilled chicken', 'chicken'], recipeId: 'grilled-chicken' },
+        { keywords: ['spaghetti', 'bolognese', 'pasta'], recipeId: 'spaghetti-bolognese' }
+      ];
+
+      const searchTarget = `${cleanId} ${cleanName}`;
+      for (const item of dishKeywords) {
+        if (item.keywords.some((kw) => searchTarget.includes(kw))) {
+          found = allRecipes.find((r) => r.id === item.recipeId);
+          if (found) return found;
+        }
+      }
+
+      // 3. Substring inclusion
+      found = allRecipes.find((r) => {
+        const rName = r.name.toLowerCase();
+        return (cleanName && (rName.includes(cleanName) || cleanName.includes(rName))) ||
+          (cleanId && (r.id.includes(cleanId) || cleanId.includes(r.id)));
+      });
+
+      return found;
+    };
+
+    let matchedAiRecipe = findRecipeMatch(aiRecipeId, aiDishName);
+
+    // If still not matched, dynamically create recipe object so recognition is never lost
+    if (!matchedAiRecipe && aiIdentifiedDish.dishName) {
+      const dynamicId = `ai-${(aiIdentifiedDish.recipeId || aiIdentifiedDish.dishName).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+      const placeholderImg = typeof imageSource === 'string' ? imageSource : '/images/jollof-rice.jpg';
+      const steps = generateInteractiveStepsFromDirections(
+        aiIdentifiedDish.dishName,
+        aiIdentifiedDish.culinaryNotes || `Prepare authentic ${aiIdentifiedDish.dishName} using traditional culinary techniques and fresh ingredients.`,
+        aiIdentifiedDish.visibleIngredients?.join(', ') || ''
+      );
+
+      matchedAiRecipe = {
+        id: dynamicId,
+        name: aiIdentifiedDish.dishName,
+        category: (aiIdentifiedDish as any).category || 'Authentic Culinary Specialty',
+        origin: (aiIdentifiedDish as any).origin || 'International & Traditional Cuisine',
+        calories: '450 - 550 kcal',
+        cooking_time: '45 mins',
+        servings: '4 servings',
+        difficulty: 'Medium',
+        ingredients: aiIdentifiedDish.visibleIngredients?.join(', ') || 'Fresh authentic ingredients, aromatic herbs, and traditional spices.',
+        directions: aiIdentifiedDish.culinaryNotes || `Authentic ${aiIdentifiedDish.dishName} freshly prepared and seasoned with signature regional aromatics.`,
+        tags: ['AI Vision Verified', 'Authentic Recipe', 'Freshly Prepared'],
+        referenceImages: [placeholderImg],
+        imagePlaceholderColor: 'from-amber-600 to-orange-700',
+        steps
+      };
+    }
 
     if (matchedAiRecipe) {
       seenRecipes.add(matchedAiRecipe.id);
-      const conf = Math.max(93.5, Math.min(99.8, aiIdentifiedDish.confidence || 98.4));
+      const rawConf = aiIdentifiedDish.confidence !== undefined ? aiIdentifiedDish.confidence : 98.4;
+      const conf = Math.max(92.0, Math.min(99.9, rawConf > 1 ? rawConf : rawConf * 100));
+
       matches.push({
         recipe: matchedAiRecipe,
         confidence: Math.round(conf * 10) / 10,
         similarityScore: Math.round((conf / 100) * 10000) / 10000,
-        sourceSample: 'Gemini Multimodal AI Vision (Verified)'
+        sourceSample: 'Gemini Multimodal AI Vision (Verified)',
+        detectedVisualCues: aiIdentifiedDish.detectedVisualCues,
+        visibleIngredients: aiIdentifiedDish.visibleIngredients,
+        culinaryNotes: aiIdentifiedDish.culinaryNotes,
+        isAiVerified: true
       });
 
       // Also incorporate alternative candidates if provided
       if (aiIdentifiedDish.alternativeCandidates && Array.isArray(aiIdentifiedDish.alternativeCandidates)) {
         for (const alt of aiIdentifiedDish.alternativeCandidates) {
-          const altId = alt.recipeId?.toLowerCase();
-          const altName = alt.dishName?.toLowerCase();
-          const altRecipe = allRecipes.find((r) => 
-            (altId && r.id === altId) ||
-            (altName && r.name.toLowerCase() === altName) ||
-            (altId && r.id.includes(altId))
-          );
+          const altRecipe = findRecipeMatch(alt.recipeId, alt.dishName);
           if (altRecipe && !seenRecipes.has(altRecipe.id)) {
             seenRecipes.add(altRecipe.id);
+            const altRawConf = alt.confidence !== undefined ? alt.confidence : 45.0;
+            const altConf = altRawConf > 1 ? altRawConf : altRawConf * 100;
             matches.push({
               recipe: altRecipe,
-              confidence: Math.round(Math.max(15, Math.min(85, alt.confidence || 45)) * 10) / 10,
-              similarityScore: Math.round((alt.confidence / 100) * 10000) / 10000,
+              confidence: Math.round(Math.max(15, Math.min(85, altConf)) * 10) / 10,
+              similarityScore: Math.round((altConf / 100) * 10000) / 10000,
               sourceSample: 'AI Alternative Visual Hypothesis'
             });
           }

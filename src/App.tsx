@@ -11,11 +11,16 @@ import { GlobalRecipeSearcher } from './components/GlobalRecipeSearcher';
 import { NearbyRestaurantFinder } from './components/NearbyRestaurantFinder';
 import { LoadingPage } from './components/LoadingPage';
 import { DatasetExplorer } from './components/DatasetExplorer';
+import { AuthModal } from './components/AuthModal';
+import { UserProfileModal } from './components/UserProfileModal';
+import { useAuth } from './context/AuthContext';
+import { syncFavoriteToCloud, fetchUserFavoritesFromCloud, saveScanToCloud } from './services/userService';
 import { matchFoodImage, getAllRecipes } from './utils/mlEngine';
 import { FeatureVector, MatchResult, Recipe, UploadHistoryItem } from './types';
 import { AlertCircle, X, ArrowLeft, Camera, Sparkles } from 'lucide-react';
 
 export default function App() {
+  const { user, userProfile } = useAuth();
   const [activeTab, setActiveTab] = useState<ActiveTab>('scanner');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -24,6 +29,9 @@ export default function App() {
   const [inferenceMs, setInferenceMs] = useState<number>(18.4);
   const [recipeCatalogCount, setRecipeCatalogCount] = useState<number>(() => getAllRecipes().length);
   const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signin');
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [globalSearchInitialQuery, setGlobalSearchInitialQuery] = useState<string>('');
   const [restaurantInitialFood, setRestaurantInitialFood] = useState<string>('');
@@ -65,6 +73,17 @@ export default function App() {
     }
   }, [historyItems]);
 
+  // Cloud favorites sync on user login
+  useEffect(() => {
+    if (user?.uid) {
+      fetchUserFavoritesFromCloud(user.uid).then((cloudIds) => {
+        if (cloudIds && cloudIds.length > 0) {
+          setFavoriteIds((prev) => Array.from(new Set([...prev, ...cloudIds])));
+        }
+      }).catch((err) => console.warn('Cloud fav sync warning:', err));
+    }
+  }, [user?.uid]);
+
   const runImageRecognition = async (imgSrc: string) => {
     setIsLoading(true);
     setScanError(null);
@@ -90,6 +109,11 @@ export default function App() {
           recipeId: top.recipe.id
         };
         setHistoryItems((prev) => [newHistoryItem, ...prev.slice(0, 49)]);
+
+        // Sync scan to cloud if user is authenticated
+        if (user?.uid) {
+          saveScanToCloud(user.uid, newHistoryItem).catch((e) => console.warn('Scan cloud sync notice:', e));
+        }
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unable to analyze the selected image. Please try another photo.';
@@ -107,9 +131,14 @@ export default function App() {
   };
 
   const toggleFavorite = (recipeId: string) => {
-    setFavoriteIds((prev) =>
-      prev.includes(recipeId) ? prev.filter((id) => id !== recipeId) : [...prev, recipeId]
-    );
+    setFavoriteIds((prev) => {
+      const willBeFav = !prev.includes(recipeId);
+      const next = willBeFav ? [...prev, recipeId] : prev.filter((id) => id !== recipeId);
+      if (user?.uid) {
+        syncFavoriteToCloud(user.uid, recipeId, willBeFav).catch((e) => console.warn('Fav cloud sync notice:', e));
+      }
+      return next;
+    });
   };
 
   const isFavorite = (recipeId: string) => favoriteIds.includes(recipeId);
@@ -129,6 +158,11 @@ export default function App() {
         recipesCount={recipeCatalogCount}
         hasResults={matches.length > 0}
         onOpenGuide={() => setIsGuideOpen(true)}
+        onOpenAuth={(mode) => {
+          setAuthModalMode(mode || 'signin');
+          setIsAuthModalOpen(true);
+        }}
+        onOpenProfile={() => setIsProfileModalOpen(true)}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -279,7 +313,7 @@ export default function App() {
           <div className="animate-in fade-in duration-300">
             <NearbyRestaurantFinder
               initialFoodQuery={restaurantInitialFood}
-              onSelectRecipeToCook={(dishName) => {
+              onSelectRecipeToCook={(dishName: string) => {
                 setGlobalSearchInitialQuery(dishName);
                 setActiveTab('global');
               }}
@@ -353,14 +387,31 @@ export default function App() {
       <OnboardingGuide
         isOpen={isGuideOpen}
         onClose={() => setIsGuideOpen(false)}
-        onNavigate={(tab) => {
+        onNavigate={(tab: ActiveTab) => {
           setActiveTab(tab);
           setIsGuideOpen(false);
         }}
-        onSelectSample={(sampleUrl) => {
+        onSelectSample={(sampleUrl: string) => {
           handleImageSelected(sampleUrl);
           setIsGuideOpen(false);
         }}
+      />
+
+      {/* Authentication Modal (Sign In / Register / Demo) */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        initialMode={authModalMode}
+      />
+
+      {/* User Profile & Account Settings Modal */}
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        favoritesCount={favoriteIds.length}
+        scansCount={historyItems.length}
+        onViewFavorites={() => setActiveTab('saved')}
+        onViewScans={() => setActiveTab('stats')}
       />
 
       <footer className="border-t border-stone-800 bg-stone-900 py-6 text-center text-xs text-stone-500">

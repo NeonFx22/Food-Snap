@@ -1,0 +1,15 @@
+[
+  {
+    "uid": "user_1789725858590_b801badc",
+    "email": "favour.test@example.com",
+    "displayName": "Chef Favour",
+    "passwordHash": "a59b54a12701df15838526091dee16dfaf24d171a89d2122fabe9d2b8085b223a4e3d68762aaa9ede7d0f95aac5d4ff4b26b5e58e9811c8057658adbee62a09a",
+    "salt": "8032a1ac57e4b42604eeb080e152058a",
+    "createdAt": "2026-09-18T10:04:18.590Z",
+    "dietaryPreferences": [
+      "West African Tradition",
+      "Spicy"
+    ],
+    "token": "tok_975e77305b680c078c3a0495eb676db47fe123e1b8e87d2791c4a5f9c0b09cf2"
+  }
+]

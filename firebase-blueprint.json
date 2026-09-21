@@ -1,0 +1,58 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile and culinary preferences",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["uid", "email"]
+    },
+    "UserFavorite": {
+      "title": "UserFavorite",
+      "description": "User saved favorite recipe",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "recipeId": { "type": "string" },
+        "title": { "type": "string" },
+        "cuisine": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "recipeId", "title"]
+    },
+    "UserScan": {
+      "title": "UserScan",
+      "description": "User scan history record",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "scanId": { "type": "string" },
+        "dishName": { "type": "string" },
+        "confidence": { "type": "number" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "scanId", "dishName"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile document"
+    },
+    "/users/{userId}/favorites/{favoriteId}": {
+      "schema": "UserFavorite",
+      "description": "User favorite recipes collection"
+    },
+    "/users/{userId}/scans/{scanId}": {
+      "schema": "UserScan",
+      "description": "User scan history collection"
+    }
+  }
+}

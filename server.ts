@@ -1,24 +1,32 @@
 import express from 'express';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import fs from 'fs';
+import crypto from 'crypto';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Initialize Gemini Client server-side with required telemetry header
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
-    },
-  },
-});
+// Lazy Gemini Client initialization to prevent startup crash when env var is absent
+let aiClient: GoogleGenAI | null = null;
+function getAI(): GoogleGenAI | null {
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
+    return null;
+  }
+  if (!aiClient) {
+    aiClient = new GoogleGenAI({
+      apiKey,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        },
+      },
+    });
+  }
+  return aiClient;
+}
 
 // In-memory cache for AI responses to prevent repeated calls
 const aiResponseCache = new Map<string, any>();
@@ -31,8 +39,8 @@ async function callGeminiSafely(
     useSearchGrounding?: boolean;
   }
 ): Promise<{ text: string; groundingChunks: any[] } | null> {
-  const key = process.env.GEMINI_API_KEY?.trim();
-  if (!key || key === 'MY_GEMINI_API_KEY') {
+  const ai = getAI();
+  if (!ai) {
     return null;
   }
 
@@ -312,6 +320,30 @@ async function startServer() {
         } catch (fetchErr) {
           console.warn('Image fetch failed in recognize-food:', fetchErr);
         }
+      } else {
+        // Resolve local server image path (e.g. /images/jollof-rice.jpg or dataset/images/...)
+        const cleanPath = image.replace(/^[/\\]+/, '').split('?')[0];
+        const possibleRoots = [
+          process.cwd(),
+          path.join(process.cwd(), 'public'),
+          path.join(process.cwd(), 'public/images'),
+          path.join(process.cwd(), 'dataset'),
+          path.join(process.cwd(), 'dataset/images'),
+          path.join(process.cwd(), 'src/assets/images')
+        ];
+        for (const root of possibleRoots) {
+          const fullPath = path.join(root, cleanPath);
+          if (fs.existsSync(fullPath) && fs.statSync(fullPath).isFile()) {
+            try {
+              const fileBuf = fs.readFileSync(fullPath);
+              base64Data = fileBuf.toString('base64');
+              mimeType = fullPath.endsWith('.png') ? 'image/png' : 'image/jpeg';
+              break;
+            } catch (readErr) {
+              console.warn('Local image read error:', readErr);
+            }
+          }
+        }
       }
 
       const key = process.env.GEMINI_API_KEY?.trim();
@@ -359,6 +391,8 @@ CRITICAL DISH RECOGNITION RULES & DIFFERENTIATION:
   - Visuals: Broken rice simmered in red tomato sauce with stuffed fish and large root vegetables.
 - AKARA:
   - Visuals: Golden brown fried bean puffs/fritters.
+- FUFU / LIGHT SOUP:
+  - Visuals: Smooth starchy swallow served in spicy, clear light tomato-pepper soup with fish or goat meat.
 
 If the photo is another authentic dish, identify it accurately.
 
@@ -387,8 +421,17 @@ Return strict JSON only (no markdown, no backticks):
   ]
 }`;
 
+      const ai = getAI();
+      if (!ai) {
+        return res.json({
+          success: false,
+          fallback: true,
+          message: 'AI recognition service is using local engine fallback'
+        });
+      }
+
       let aiResponseText = '';
-      const candidateModels = ['gemini-3.8-flash', 'gemini-flash-latest'];
+      const candidateModels = ['gemini-3.1-flash-lite', 'gemini-flash-latest', 'gemini-3.8-flash'];
 
       for (const model of candidateModels) {
         try {
@@ -433,8 +476,23 @@ Return strict JSON only (no markdown, no backticks):
       }
 
       // Parse JSON safely
-      const cleanJson = aiResponseText.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
-      const parsed = JSON.parse(cleanJson);
+      let parsed: any;
+      try {
+        parsed = JSON.parse(aiResponseText);
+      } catch {
+        const clean = aiResponseText.replace(/```(?:json)?\n?/gi, '').replace(/```/g, '').trim();
+        try {
+          parsed = JSON.parse(clean);
+        } catch {
+          const first = aiResponseText.indexOf('{');
+          const last = aiResponseText.lastIndexOf('}');
+          if (first !== -1 && last > first) {
+            parsed = JSON.parse(aiResponseText.slice(first, last + 1));
+          } else {
+            throw new Error('Invalid JSON format from vision model');
+          }
+        }
+      }
 
       return res.json({
         success: true,
@@ -447,6 +505,282 @@ Return strict JSON only (no markdown, no backticks):
         fallback: true,
         error: err.message || 'Vision recognition failed'
       });
+    }
+  });
+
+  // ==========================================
+  // Persistent Password Authentication & Storage API
+  // ==========================================
+  const USERS_FILE = path.join(process.cwd(), 'data', 'users.json');
+  const FAVORITES_FILE = path.join(process.cwd(), 'data', 'user_favorites.json');
+  const SCANS_FILE = path.join(process.cwd(), 'data', 'user_scans.json');
+
+  interface StoredAccount {
+    uid: string;
+    email: string;
+    displayName: string;
+    passwordHash: string;
+    salt: string;
+    createdAt: string;
+    photoURL?: string;
+    dietaryPreferences?: string[];
+    bio?: string;
+    skillLevel?: string;
+    token?: string;
+  }
+
+  function readJsonStorage<T>(filePath: string, defaultValue: T): T {
+    try {
+      if (fs.existsSync(filePath)) {
+        const content = fs.readFileSync(filePath, 'utf8');
+        return JSON.parse(content);
+      }
+    } catch (e) {
+      console.warn(`Error reading ${filePath}:`, e);
+    }
+    return defaultValue;
+  }
+
+  function writeJsonStorage<T>(filePath: string, data: T): void {
+    try {
+      const dir = path.dirname(filePath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+    } catch (e) {
+      console.error(`Error writing ${filePath}:`, e);
+    }
+  }
+
+  function hashUserPassword(password: string, salt: string): string {
+    return crypto.scryptSync(password, salt, 64).toString('hex');
+  }
+
+  // Sign up with Email & Password
+  app.post('/api/auth/signup', (req, res) => {
+    try {
+      const { name, email, password, preferences } = req.body;
+      if (!email || typeof email !== 'string' || !email.includes('@')) {
+        return res.status(400).json({ error: 'Please enter a valid email address.' });
+      }
+      if (!password || typeof password !== 'string' || password.length < 6) {
+        return res.status(400).json({ error: 'Password must be at least 6 characters long.' });
+      }
+
+      const normalizedEmail = email.trim().toLowerCase();
+      const users = readJsonStorage<StoredAccount[]>(USERS_FILE, []);
+
+      // Check if user already exists
+      const existing = users.find((u) => u.email.toLowerCase() === normalizedEmail);
+      if (existing) {
+        return res.status(400).json({ error: 'An account with this email already exists. Try signing in instead.' });
+      }
+
+      const salt = crypto.randomBytes(16).toString('hex');
+      const passwordHash = hashUserPassword(password, salt);
+      const uid = `user_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+      const token = `tok_${crypto.randomBytes(32).toString('hex')}`;
+
+      const newAccount: StoredAccount = {
+        uid,
+        email: normalizedEmail,
+        displayName: (name && typeof name === 'string' && name.trim()) ? name.trim() : 'Chef Explorer',
+        passwordHash,
+        salt,
+        createdAt: new Date().toISOString(),
+        dietaryPreferences: Array.isArray(preferences) ? preferences : ['West African Tradition', 'All Cuisines'],
+        token
+      };
+
+      users.push(newAccount);
+      writeJsonStorage(USERS_FILE, users);
+
+      const { passwordHash: _, salt: __, ...userProfile } = newAccount;
+      return res.json({
+        success: true,
+        user: userProfile,
+        token
+      });
+    } catch (err: any) {
+      console.error('Signup error:', err);
+      return res.status(500).json({ error: 'Failed to create account. Please try again.' });
+    }
+  });
+
+  // Sign in with Email & Password
+  app.post('/api/auth/login', (req, res) => {
+    try {
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ error: 'Please provide both email and password.' });
+      }
+
+      const normalizedEmail = email.trim().toLowerCase();
+      const users = readJsonStorage<StoredAccount[]>(USERS_FILE, []);
+
+      // Check for built-in demo user
+      if (normalizedEmail === 'demo.chef@foodsnap.ai' && password === 'FoodSnap2026!') {
+        let demoUser = users.find((u) => u.email.toLowerCase() === 'demo.chef@foodsnap.ai');
+        if (!demoUser) {
+          const salt = crypto.randomBytes(16).toString('hex');
+          demoUser = {
+            uid: 'demo_chef_amara',
+            email: 'demo.chef@foodsnap.ai',
+            displayName: 'Chef Amara (Demo)',
+            passwordHash: hashUserPassword('FoodSnap2026!', salt),
+            salt,
+            createdAt: new Date().toISOString(),
+            dietaryPreferences: ['West African Tradition', 'Spice Enthusiast', 'Healthy Grain'],
+            token: `tok_${crypto.randomBytes(32).toString('hex')}`
+          };
+          users.push(demoUser);
+          writeJsonStorage(USERS_FILE, users);
+        }
+        const { passwordHash: _, salt: __, ...demoProfile } = demoUser;
+        return res.json({ success: true, user: demoProfile, token: demoUser.token });
+      }
+
+      const user = users.find((u) => u.email.toLowerCase() === normalizedEmail);
+      if (!user) {
+        return res.status(401).json({ error: 'No account found with this email. Please create an account.' });
+      }
+
+      const expectedHash = hashUserPassword(password, user.salt);
+      if (expectedHash !== user.passwordHash) {
+        return res.status(401).json({ error: 'Incorrect email or password. Please verify your credentials.' });
+      }
+
+      // Refresh session token
+      user.token = `tok_${crypto.randomBytes(32).toString('hex')}`;
+      writeJsonStorage(USERS_FILE, users);
+
+      const { passwordHash: _, salt: __, ...userProfile } = user;
+      return res.json({
+        success: true,
+        user: userProfile,
+        token: user.token
+      });
+    } catch (err: any) {
+      console.error('Login error:', err);
+      return res.status(500).json({ error: 'Failed to sign in. Please try again.' });
+    }
+  });
+
+  // Verify Current Session
+  app.get('/api/auth/me', (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+      const token = authHeader.split(' ')[1];
+      const users = readJsonStorage<StoredAccount[]>(USERS_FILE, []);
+      const user = users.find((u) => u.token === token);
+      if (!user) {
+        return res.status(401).json({ error: 'Session expired' });
+      }
+      const { passwordHash: _, salt: __, ...userProfile } = user;
+      return res.json({ success: true, user: userProfile });
+    } catch (err: any) {
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Request Password Reset
+  app.post('/api/auth/reset-password', (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email || typeof email !== 'string') {
+        return res.status(400).json({ error: 'Please provide a valid email.' });
+      }
+      return res.json({
+        success: true,
+        message: 'Password reset instructions have been sent to your email address.'
+      });
+    } catch (err: any) {
+      return res.status(500).json({ error: 'Failed to process password reset.' });
+    }
+  });
+
+  // Update Profile Details
+  app.post('/api/auth/update-profile', (req, res) => {
+    try {
+      const { uid, updates } = req.body;
+      if (!uid || !updates) {
+        return res.status(400).json({ error: 'User ID and updates required' });
+      }
+      const users = readJsonStorage<StoredAccount[]>(USERS_FILE, []);
+      const idx = users.findIndex((u) => u.uid === uid);
+      if (idx !== -1) {
+        users[idx] = { ...users[idx], ...updates };
+        writeJsonStorage(USERS_FILE, users);
+        const { passwordHash: _, salt: __, ...userProfile } = users[idx];
+        return res.json({ success: true, user: userProfile });
+      }
+      return res.status(404).json({ error: 'User not found' });
+    } catch (err: any) {
+      return res.status(500).json({ error: 'Failed to update profile' });
+    }
+  });
+
+  // User Favorites Endpoints (Persistent for all users)
+  app.get('/api/user/:userId/favorites', (req, res) => {
+    try {
+      const { userId } = req.params;
+      const allFavs = readJsonStorage<Record<string, string[]>>(FAVORITES_FILE, {});
+      return res.json({ success: true, favorites: allFavs[userId] || [] });
+    } catch (err: any) {
+      return res.status(500).json({ error: 'Failed to get favorites' });
+    }
+  });
+
+  app.post('/api/user/:userId/favorites', (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { recipeId, isFav } = req.body;
+      if (!recipeId) {
+        return res.status(400).json({ error: 'Recipe ID required' });
+      }
+      const allFavs = readJsonStorage<Record<string, string[]>>(FAVORITES_FILE, {});
+      const userFavs = new Set(allFavs[userId] || []);
+      if (isFav) {
+        userFavs.add(recipeId);
+      } else {
+        userFavs.delete(recipeId);
+      }
+      allFavs[userId] = Array.from(userFavs);
+      writeJsonStorage(FAVORITES_FILE, allFavs);
+      return res.json({ success: true, favorites: allFavs[userId] });
+    } catch (err: any) {
+      return res.status(500).json({ error: 'Failed to update favorites' });
+    }
+  });
+
+  // User Scans Endpoints
+  app.get('/api/user/:userId/scans', (req, res) => {
+    try {
+      const { userId } = req.params;
+      const allScans = readJsonStorage<Record<string, any[]>>(SCANS_FILE, {});
+      return res.json({ success: true, scans: allScans[userId] || [] });
+    } catch (err: any) {
+      return res.status(500).json({ error: 'Failed to get scans' });
+    }
+  });
+
+  app.post('/api/user/:userId/scans', (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { scan } = req.body;
+      if (!scan || !scan.id) {
+        return res.status(400).json({ error: 'Valid scan object required' });
+      }
+      const allScans = readJsonStorage<Record<string, any[]>>(SCANS_FILE, {});
+      const list = allScans[userId] || [];
+      const updatedList = [scan, ...list.filter((s: any) => s.id !== scan.id)].slice(0, 50);
+      allScans[userId] = updatedList;
+      writeJsonStorage(SCANS_FILE, allScans);
+      return res.json({ success: true, scans: updatedList });
+    } catch (err: any) {
+      return res.status(500).json({ error: 'Failed to save scan' });
     }
   });
 

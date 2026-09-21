@@ -6,22 +6,22 @@
 
 import { aiImageVerifier } from '../services/aiImageVerifierService';
 
-import jollofImg from '../assets/images/jollof_rice_photo_1786969421486.jpg';
-import egusiImg from '../assets/images/egusi_soup_photo_1786969435060.jpg';
-import suyaImg from '../assets/images/suya_skewers_photo_1786969448824.jpg';
-import efoImg from '../assets/images/efo_riro_photo_1786969461222.jpg';
-import moiImg from '../assets/images/moi_moi_photo_1786969474655.jpg';
-import chinImg from '../assets/images/chin_chin_photo_1786969483837.jpg';
-import yamImg from '../assets/images/pounded_yam_photo_1786969496819.jpg';
-import amalaImg from '../assets/images/amala_dish_photo_1786969511303.jpg';
-import ogbonoImg from '../assets/images/ogbono_soup_1789710460803.jpg';
-import afangImg from '../assets/images/afang_soup_1789710473735.jpg';
-import bangaImg from '../assets/images/banga_soup_1789710484614.jpg';
-import pepperSoupImg from '../assets/images/pepper_soup_1789710497135.jpg';
-import waakyeImg from '../assets/images/waakye_dish_1789710511588.jpg';
-import thiebouImg from '../assets/images/thieboudienne_dish_1789710524880.jpg';
-import akaraImg from '../assets/images/akara_fritters_1789710541023.jpg';
-import fufuImg from '../assets/images/fufu_light_soup_1789710554157.jpg';
+const jollofImg = '/dataset/images/jollof.jpg';
+const egusiImg = '/dataset/images/egusi_soup.jpg';
+const suyaImg = '/dataset/images/suya.jpg';
+const efoImg = '/dataset/images/efo_riro.jpg';
+const moiImg = '/dataset/images/moi_moi.jpg';
+const chinImg = '/dataset/images/chin-chin.jpg';
+const yamImg = '/dataset/images/pounded_yam.jpg';
+const amalaImg = '/dataset/images/amala.jpg';
+const ogbonoImg = '/dataset/images/ogbono-soup.jpg';
+const afangImg = '/dataset/images/afang.jpg';
+const bangaImg = '/dataset/images/banga.jpg';
+const pepperSoupImg = '/dataset/images/pepper-soup.jpg';
+const waakyeImg = '/dataset/images/waakye.jpg';
+const thiebouImg = '/dataset/images/thieboudienne.jpg';
+const akaraImg = '/dataset/images/akara.jpg';
+const fufuImg = '/dataset/images/fufu.jpg';
 
 export const LOCAL_BUNDLED_DISH_IMAGES: Record<string, string> = {
   jollof: jollofImg,

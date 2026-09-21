@@ -70,6 +70,10 @@ export interface MatchResult {
   confidence: number; // 0 to 100%
   similarityScore: number; // 0.0 to 1.0
   sourceSample: string;
+  detectedVisualCues?: string[];
+  visibleIngredients?: string[];
+  culinaryNotes?: string;
+  isAiVerified?: boolean;
 }
 
 export interface FeatureVector {
