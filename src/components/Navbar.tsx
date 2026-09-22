@@ -18,7 +18,8 @@ import {
   User as UserIcon,
   LogIn,
   LogOut,
-  UserPlus
+  UserPlus,
+  Server
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -34,6 +35,7 @@ interface NavbarProps {
   onOpenGuide?: () => void;
   onOpenAuth?: (mode?: 'signin' | 'signup') => void;
   onOpenProfile?: () => void;
+  onOpenDjango?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -45,7 +47,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   hasResults = false,
   onOpenGuide,
   onOpenAuth,
-  onOpenProfile
+  onOpenProfile,
+  onOpenDjango
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user, userProfile, logout } = useAuth();
@@ -198,6 +201,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                   );
                 })}
               </nav>
+
+              {/* Django API Button */}
+              {onOpenDjango && (
+                <button
+                  onClick={onOpenDjango}
+                  id="nav-btn-django"
+                  className="hidden md:flex items-center gap-1.5 py-1.5 px-3 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-500/30 text-emerald-300 text-xs font-semibold transition-all shadow-sm group"
+                  title="Django REST Framework Microservice"
+                >
+                  <Server className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
+                  <span>Django API</span>
+                </button>
+              )}
 
               {/* Auth / Profile Button (Desktop) */}
               <div className="hidden sm:flex items-center">
@@ -416,6 +432,28 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </button>
                   );
                 })}
+
+                {/* Django API Option in Mobile Menu */}
+                {onOpenDjango && (
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      onOpenDjango();
+                    }}
+                    className="w-full flex items-center justify-between p-3 rounded-2xl text-left transition-all border bg-emerald-950/30 border-emerald-500/30 text-emerald-300 hover:bg-emerald-950/50"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                        <Server className="w-4 h-4" />
+                      </div>
+                      <div className="truncate">
+                        <div className="text-sm font-bold truncate">Django REST Framework</div>
+                        <div className="text-[11px] text-emerald-400/80 truncate">Python microservice &amp; REST API endpoints</div>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-emerald-400/60" />
+                  </button>
+                )}
               </div>
             </div>
 

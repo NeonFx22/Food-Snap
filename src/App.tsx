@@ -13,6 +13,7 @@ import { LoadingPage } from './components/LoadingPage';
 import { DatasetExplorer } from './components/DatasetExplorer';
 import { AuthModal } from './components/AuthModal';
 import { UserProfileModal } from './components/UserProfileModal';
+import { DjangoBackendModal } from './components/DjangoBackendModal';
 import { useAuth } from './context/AuthContext';
 import { syncFavoriteToCloud, fetchUserFavoritesFromCloud, saveScanToCloud } from './services/userService';
 import { matchFoodImage, getAllRecipes } from './utils/mlEngine';
@@ -32,6 +33,7 @@ export default function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signin');
   const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
+  const [isDjangoModalOpen, setIsDjangoModalOpen] = useState<boolean>(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [globalSearchInitialQuery, setGlobalSearchInitialQuery] = useState<string>('');
   const [restaurantInitialFood, setRestaurantInitialFood] = useState<string>('');
@@ -163,6 +165,7 @@ export default function App() {
           setIsAuthModalOpen(true);
         }}
         onOpenProfile={() => setIsProfileModalOpen(true)}
+        onOpenDjango={() => setIsDjangoModalOpen(true)}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -412,6 +415,12 @@ export default function App() {
         scansCount={historyItems.length}
         onViewFavorites={() => setActiveTab('saved')}
         onViewScans={() => setActiveTab('stats')}
+      />
+
+      {/* Django REST Framework Backend Integration Modal */}
+      <DjangoBackendModal
+        isOpen={isDjangoModalOpen}
+        onClose={() => setIsDjangoModalOpen(false)}
       />
 
       <footer className="border-t border-stone-800 bg-stone-900 py-6 text-center text-xs text-stone-500">

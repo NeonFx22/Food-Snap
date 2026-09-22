@@ -789,6 +789,92 @@ Return strict JSON only (no markdown, no backticks):
     res.json({ status: 'ok', time: new Date().toISOString() });
   });
 
+  // ==========================================
+  // Django REST Framework Integration Bridge
+  // ==========================================
+  const DJANGO_API_URL = process.env.DJANGO_API_URL || 'http://localhost:8000';
+
+  app.get('/api/django/status', async (req, res) => {
+    try {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), 2000);
+      const djangoRes = await fetch(`${DJANGO_API_URL}/api/health/`, {
+        signal: controller.signal,
+      }).catch(() => null);
+      clearTimeout(id);
+
+      if (djangoRes && djangoRes.ok) {
+        const data = await djangoRes.json();
+        return res.json({
+          available: true,
+          url: DJANGO_API_URL,
+          backend: 'Django REST Framework',
+          details: data,
+        });
+      }
+      return res.json({
+        available: false,
+        url: DJANGO_API_URL,
+        backend: 'Django REST Framework',
+        message: 'Django REST Framework backend configured in /backend. Run "python manage.py runserver 8000" in the backend directory to connect live.',
+        endpoints: [
+          '/api/recognize/',
+          '/api/recipes/',
+          '/api/scans/',
+          '/api/favorites/',
+          '/api/auth/register/',
+          '/api/auth/login/',
+        ]
+      });
+    } catch (e: any) {
+      return res.json({
+        available: false,
+        url: DJANGO_API_URL,
+        error: e.message
+      });
+    }
+  });
+
+  // Proxy to Django REST Framework if online
+  app.all('/api/django/*', async (req, res) => {
+    try {
+      const targetPath = req.originalUrl.replace(/^\/api\/django/, '/api');
+      const targetUrl = `${DJANGO_API_URL}${targetPath}`;
+      
+      const headers: Record<string, string> = {};
+      if (req.headers['content-type']) {
+        headers['Content-Type'] = req.headers['content-type'] as string;
+      }
+      if (req.headers.authorization) {
+        headers['Authorization'] = req.headers.authorization as string;
+      }
+
+      const options: RequestInit = {
+        method: req.method,
+        headers,
+      };
+
+      if (req.method !== 'GET' && req.method !== 'HEAD' && req.body) {
+        options.body = JSON.stringify(req.body);
+      }
+
+      const response = await fetch(targetUrl, options);
+      const data = await response.text();
+      res.status(response.status);
+      try {
+        res.json(JSON.parse(data));
+      } catch {
+        res.send(data);
+      }
+    } catch (err: any) {
+      res.status(503).json({
+        error: 'Django REST Framework service unreachable',
+        message: 'Ensure the Django server is running with: cd backend && python manage.py runserver 8000',
+        details: err.message
+      });
+    }
+  });
+
   // Get all verified dataset images
   app.get('/api/dataset-images', (req, res) => {
     res.json({

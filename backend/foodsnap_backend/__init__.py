@@ -1,0 +1,3 @@
+"""
+FoodSnap Django Backend Package
+"""
