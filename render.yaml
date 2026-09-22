@@ -1,0 +1,47 @@
+# Render Infrastructure as Code Blueprint for FoodSnap
+# https://render.com/docs/blueprint-spec
+
+services:
+  # ============================================================
+  # 1. Django REST Framework Python Backend Service
+  # ============================================================
+  - type: web
+    name: foodsnap-django-api
+    runtime: python
+    region: oregon
+    plan: free
+    rootDir: backend
+    buildCommand: ./build.sh
+    startCommand: gunicorn foodsnap_backend.wsgi:application --bind 0.0.0.0:$PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.12
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false
+
+  # ============================================================
+  # 2. FoodSnap Full-Stack Web Application (Node + React + Vite)
+  # ============================================================
+  - type: web
+    name: foodsnap-app
+    runtime: node
+    region: oregon
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: node dist/server.cjs
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3000"
+      - key: DJANGO_API_URL
+        fromService:
+          type: web
+          name: foodsnap-django-api
+          property: host
+      - key: GEMINI_API_KEY
+        sync: false
