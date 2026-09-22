@@ -763,35 +763,105 @@ export async function matchFoodImage(
     visibleIngredients?: string[];
     culinaryNotes?: string;
     alternativeCandidates?: Array<{ dishName: string; recipeId: string; confidence: number }>;
+    engine?: string;
   } | null = null;
 
   try {
     let payload: string | null = null;
     if (typeof imageSource === 'string') {
-      payload = imageSource;
+      if (imageSource.startsWith('data:') && imageSource.length > 500000) {
+        // Downscale large data URLs for faster transfer and avoiding limits
+        try {
+          const img = await loadImageHelper(imageSource);
+          const maxDim = 1200;
+          let width = img.naturalWidth || img.width || 600;
+          let height = img.naturalHeight || img.height || 600;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          const c = document.createElement('canvas');
+          c.width = width;
+          c.height = height;
+          const ctx = c.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            payload = c.toDataURL('image/jpeg', 0.88);
+          } else {
+            payload = imageSource;
+          }
+        } catch {
+          payload = imageSource;
+        }
+      } else {
+        payload = imageSource;
+      }
     } else if (imageSource instanceof HTMLImageElement) {
       const c = document.createElement('canvas');
-      c.width = imageSource.naturalWidth || imageSource.width || 300;
-      c.height = imageSource.naturalHeight || imageSource.height || 300;
+      const maxDim = 1200;
+      let width = imageSource.naturalWidth || imageSource.width || 400;
+      let height = imageSource.naturalHeight || imageSource.height || 400;
+      if (width > maxDim || height > maxDim) {
+        if (width > height) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        } else {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+      }
+      c.width = width;
+      c.height = height;
       const ctx = c.getContext('2d');
       if (ctx) {
-        ctx.drawImage(imageSource, 0, 0);
-        payload = c.toDataURL('image/jpeg', 0.85);
+        ctx.drawImage(imageSource, 0, 0, width, height);
+        payload = c.toDataURL('image/jpeg', 0.88);
       }
     } else if (imageSource instanceof HTMLCanvasElement) {
-      payload = imageSource.toDataURL('image/jpeg', 0.85);
+      payload = imageSource.toDataURL('image/jpeg', 0.88);
     }
 
     if (payload) {
-      const response = await fetch('/api/ai/recognize-food', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: payload })
-      });
-      if (response.ok) {
-        const json = await response.json();
-        if (json.success && json.dishName) {
-          aiIdentifiedDish = json;
+      try {
+        const response = await fetch('/api/ai/recognize-food', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: payload })
+        });
+        if (response.ok) {
+          const json = await response.json();
+          if (json.success && json.dishName) {
+            aiIdentifiedDish = json;
+          }
+        }
+      } catch (nodeErr) {
+        console.warn('Node server recognition notice:', nodeErr);
+      }
+
+      // If Node AI didn't identify, attempt direct Django backend recognition
+      if (!aiIdentifiedDish) {
+        try {
+          const djangoRes = await fetch('/api/django/recognize/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image_base64: payload })
+          });
+          if (djangoRes.ok) {
+            const djangoJson = await djangoRes.json();
+            if (djangoJson.success && djangoJson.dishName) {
+              aiIdentifiedDish = {
+                ...djangoJson,
+                engine: 'django_hybrid_vision'
+              };
+            }
+          }
+        } catch (djErr) {
+          console.warn('Direct Django recognition notice:', djErr);
         }
       }
     }
@@ -806,7 +876,27 @@ export async function matchFoodImage(
   const seenRecipes = new Set<string>();
   const matches: MatchResult[] = [];
 
-  // If AI Multimodal recognized a specific dish, prioritize it at the top
+  // 1. If a known preset reference was selected from demo gallery, prioritize it with full confidence
+  if (matchedPresetRecipe) {
+    seenRecipes.add(matchedPresetRecipe.id);
+    const presetEntry = allEncodings.find((e) => e.recipeId === matchedPresetRecipe?.id);
+    matches.push({
+      recipe: matchedPresetRecipe,
+      confidence: 99.4,
+      similarityScore: 0.994,
+      sourceSample: presetEntry?.filename || `${matchedPresetRecipe.id}_ref.jpg`,
+      detectedVisualCues: aiIdentifiedDish?.detectedVisualCues || [
+        `Authentic regional color and texture signature for ${matchedPresetRecipe.name}`,
+        `Characterized by traditional ingredients and cooking style`,
+        `Direct ground-truth culinary match in verified dataset`
+      ],
+      visibleIngredients: aiIdentifiedDish?.visibleIngredients,
+      culinaryNotes: aiIdentifiedDish?.culinaryNotes || matchedPresetRecipe.directions,
+      isAiVerified: true
+    });
+  }
+
+  // 2. If AI Multimodal recognized a specific dish, prioritize it at the top
   if (aiIdentifiedDish && (aiIdentifiedDish.dishName || aiIdentifiedDish.recipeId)) {
     const aiRecipeId = (aiIdentifiedDish.recipeId || '').toLowerCase().trim();
     const aiDishName = (aiIdentifiedDish.dishName || '').toLowerCase().trim();
@@ -871,7 +961,7 @@ export async function matchFoodImage(
     // If still not matched, dynamically create recipe object so recognition is never lost
     if (!matchedAiRecipe && aiIdentifiedDish.dishName) {
       const dynamicId = `ai-${(aiIdentifiedDish.recipeId || aiIdentifiedDish.dishName).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
-      const placeholderImg = typeof imageSource === 'string' ? imageSource : '/images/jollof-rice.jpg';
+      const placeholderImg = typeof imageSource === 'string' ? imageSource : '/dataset/images/jollof-rice.jpg';
       const steps = generateInteractiveStepsFromDirections(
         aiIdentifiedDish.dishName,
         aiIdentifiedDish.culinaryNotes || `Prepare authentic ${aiIdentifiedDish.dishName} using traditional culinary techniques and fresh ingredients.`,
@@ -896,16 +986,19 @@ export async function matchFoodImage(
       };
     }
 
-    if (matchedAiRecipe) {
+    if (matchedAiRecipe && !seenRecipes.has(matchedAiRecipe.id)) {
       seenRecipes.add(matchedAiRecipe.id);
       const rawConf = aiIdentifiedDish.confidence !== undefined ? aiIdentifiedDish.confidence : 98.4;
       const conf = Math.max(92.0, Math.min(99.9, rawConf > 1 ? rawConf : rawConf * 100));
+      const sourceLabel = aiIdentifiedDish.engine === 'django_hybrid_vision'
+        ? 'Python ML Computer Vision (Django)'
+        : 'Gemini Multimodal AI Vision (Verified)';
 
       matches.push({
         recipe: matchedAiRecipe,
         confidence: Math.round(conf * 10) / 10,
         similarityScore: Math.round((conf / 100) * 10000) / 10000,
-        sourceSample: 'Gemini Multimodal AI Vision (Verified)',
+        sourceSample: sourceLabel,
         detectedVisualCues: aiIdentifiedDish.detectedVisualCues,
         visibleIngredients: aiIdentifiedDish.visibleIngredients,
         culinaryNotes: aiIdentifiedDish.culinaryNotes,

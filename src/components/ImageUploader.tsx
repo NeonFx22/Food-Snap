@@ -54,9 +54,39 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     }
     const reader = new FileReader();
     reader.onload = (event) => {
-      if (event.target?.result) {
-        onImageSelected(event.target.result as string);
-      }
+      const rawDataUrl = event.target?.result as string;
+      if (!rawDataUrl) return;
+
+      // Downscale high-resolution phone camera photos to max 1280px for fast, reliable inference
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 1280;
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressed = canvas.toDataURL('image/jpeg', 0.88);
+          onImageSelected(compressed);
+        } else {
+          onImageSelected(rawDataUrl);
+        }
+      };
+      img.onerror = () => {
+        onImageSelected(rawDataUrl);
+      };
+      img.src = rawDataUrl;
     };
     reader.readAsDataURL(file);
   };

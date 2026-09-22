@@ -312,24 +312,28 @@ Return JSON ONLY:
   "alternativeCandidates": [{"dishName": "Alt", "recipeId": "alt-id", "confidence": 15.0}]
 }"""
             b64_data = base64.b64encode(image_bytes).decode('utf-8')
-            response = client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=[
-                    {
-                        'role': 'user',
-                        'parts': [
-                            {'inline_data': {'mime_type': mime_type, 'data': b64_data}},
-                            {'text': prompt}
+            for model_name in ['gemini-flash-latest', 'gemini-3.1-flash-lite']:
+                try:
+                    response = client.models.generate_content(
+                        model=model_name,
+                        contents=[
+                            {
+                                'role': 'user',
+                                'parts': [
+                                    {'inline_data': {'mime_type': mime_type, 'data': b64_data}},
+                                    {'text': prompt}
+                                ]
+                            }
                         ]
-                    }
-                ]
-            )
-            if response and response.text:
-                cleaned = re.sub(r'```(?:json)?', '', response.text).strip()
-                parsed = json.loads(cleaned)
-                parsed['success'] = True
-                parsed['engine'] = 'gemini_vision'
-                return parsed
+                    )
+                    if response and response.text:
+                        cleaned = re.sub(r'```(?:json)?', '', response.text).strip()
+                        parsed = json.loads(cleaned)
+                        parsed['success'] = True
+                        parsed['engine'] = 'gemini_vision'
+                        return parsed
+                except Exception:
+                    continue
         except Exception as gemini_err:
             # Gracefully retain the heuristic result
             result['gemini_fallback_note'] = str(gemini_err)

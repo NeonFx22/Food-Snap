@@ -347,15 +347,12 @@ async function startServer() {
       }
 
       const key = process.env.GEMINI_API_KEY?.trim();
-      if (!key || key === 'MY_GEMINI_API_KEY' || !base64Data) {
-        return res.json({
-          success: false,
-          fallback: true,
-          message: 'AI API unavailable or unconfigured, using local vector matching'
-        });
-      }
+      let parsedResult: any = null;
 
-      const prompt = `You are a world-leading culinary recognition AI specializing in African, West African, and international gastronomy.
+      if (key && key !== 'MY_GEMINI_API_KEY' && base64Data) {
+        const ai = getAI();
+        if (ai) {
+          const prompt = `You are a world-leading culinary recognition AI specializing in African, West African, and international gastronomy.
 Analyze this food photograph and identify the EXACT dish shown with absolute precision.
 
 CRITICAL DISH RECOGNITION RULES & DIFFERENTIATION:
@@ -421,82 +418,108 @@ Return strict JSON only (no markdown, no backticks):
   ]
 }`;
 
-      const ai = getAI();
-      if (!ai) {
-        return res.json({
-          success: false,
-          fallback: true,
-          message: 'AI recognition service is using local engine fallback'
-        });
-      }
+          let aiResponseText = '';
+          const candidateModels = ['gemini-flash-latest', 'gemini-3.1-flash-lite', 'gemini-3.8-flash'];
 
-      let aiResponseText = '';
-      const candidateModels = ['gemini-3.1-flash-lite', 'gemini-flash-latest', 'gemini-3.8-flash'];
-
-      for (const model of candidateModels) {
-        try {
-          const response = await ai.models.generateContent({
-            model,
-            contents: [
-              {
-                role: 'user',
-                parts: [
+          for (const model of candidateModels) {
+            try {
+              const response = await ai.models.generateContent({
+                model,
+                contents: [
                   {
-                    inlineData: {
-                      mimeType,
-                      data: base64Data
-                    }
-                  },
-                  {
-                    text: prompt
+                    role: 'user',
+                    parts: [
+                      {
+                        inlineData: {
+                          mimeType,
+                          data: base64Data
+                        }
+                      },
+                      {
+                        text: prompt
+                      }
+                    ]
                   }
-                ]
+                ],
+                config: {
+                  responseMimeType: 'application/json'
+                }
+              });
+
+              if (response.text) {
+                aiResponseText = response.text;
+                break;
               }
-            ],
-            config: {
-              responseMimeType: 'application/json'
+            } catch (modelErr: any) {
+              console.warn(`Vision model ${model} attempt notice:`, modelErr?.message || modelErr);
             }
-          });
-
-          if (response.text) {
-            aiResponseText = response.text;
-            break;
           }
-        } catch (modelErr: any) {
-          console.warn(`Vision model ${model} attempt failed:`, modelErr?.message || modelErr);
+
+          if (aiResponseText) {
+            try {
+              parsedResult = JSON.parse(aiResponseText);
+            } catch {
+              const clean = aiResponseText.replace(/```(?:json)?\n?/gi, '').replace(/```/g, '').trim();
+              try {
+                parsedResult = JSON.parse(clean);
+              } catch {
+                const first = aiResponseText.indexOf('{');
+                const last = aiResponseText.lastIndexOf('}');
+                if (first !== -1 && last > first) {
+                  parsedResult = JSON.parse(aiResponseText.slice(first, last + 1));
+                }
+              }
+            }
+            if (parsedResult) {
+              parsedResult.engine = 'gemini_vision';
+            }
+          }
         }
       }
 
-      if (!aiResponseText) {
-        return res.json({
-          success: false,
-          fallback: true,
-          message: 'Vision model did not return text'
-        });
-      }
-
-      // Parse JSON safely
-      let parsed: any;
-      try {
-        parsed = JSON.parse(aiResponseText);
-      } catch {
-        const clean = aiResponseText.replace(/```(?:json)?\n?/gi, '').replace(/```/g, '').trim();
+      // If Gemini wasn't available, failed, or didn't return a match:
+      // Seamlessly fall back to the Django Computer Vision & ML API
+      if (!parsedResult && base64Data) {
         try {
-          parsed = JSON.parse(clean);
-        } catch {
-          const first = aiResponseText.indexOf('{');
-          const last = aiResponseText.lastIndexOf('}');
-          if (first !== -1 && last > first) {
-            parsed = JSON.parse(aiResponseText.slice(first, last + 1));
-          } else {
-            throw new Error('Invalid JSON format from vision model');
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 6000);
+          const rawDjangoUrl = (process.env.DJANGO_API_URL || 'http://localhost:8000').trim();
+          const djangoBase = rawDjangoUrl.startsWith('http') ? rawDjangoUrl : `https://${rawDjangoUrl}`;
+          const djangoRes = await fetch(`${djangoBase.replace(/\/+$/, '')}/api/recognize/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              image_base64: `data:${mimeType};base64,${base64Data}`
+            }),
+            signal: controller.signal
+          }).catch(() => null);
+          clearTimeout(timeoutId);
+
+          if (djangoRes && djangoRes.ok) {
+            const djangoData = await djangoRes.json();
+            if (djangoData.success && djangoData.dishName) {
+              parsedResult = {
+                ...djangoData,
+                engine: 'django_hybrid_vision'
+              };
+            }
           }
+        } catch (djangoErr) {
+          console.warn('Django CV fallback attempt notice:', djangoErr);
         }
+      }
+
+      if (parsedResult) {
+        return res.json({
+          success: true,
+          ...parsedResult
+        });
       }
 
       return res.json({
-        success: true,
-        ...parsed
+        success: false,
+        fallback: true,
+        message: 'AI recognition service is using local engine fallback'
       });
     } catch (err: any) {
       console.error('Food recognition endpoint error:', err);
