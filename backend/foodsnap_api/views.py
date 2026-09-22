@@ -40,6 +40,9 @@ class HealthCheckView(APIView):
             'database': 'SQLite / PostgreSQL Ready'
         })
 
+    def head(self, request):
+        return Response(status=status.HTTP_200_OK)
+
 
 class AfricanDishViewSet(viewsets.ModelViewSet):
     """
