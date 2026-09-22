@@ -74,6 +74,8 @@ export interface MatchResult {
   visibleIngredients?: string[];
   culinaryNotes?: string;
   isAiVerified?: boolean;
+  uploadedImagePreview?: string;
+  offlineNotice?: string;
 }
 
 export interface FeatureVector {

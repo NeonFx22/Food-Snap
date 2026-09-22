@@ -826,6 +826,9 @@ export async function matchFoodImage(
       payload = imageSource.toDataURL('image/jpeg', 0.88);
     }
 
+    let serverReportedFallback = false;
+    let serverFallbackMessage = '';
+
     if (payload) {
       try {
         const response = await fetch('/api/ai/recognize-food', {
@@ -837,6 +840,9 @@ export async function matchFoodImage(
           const json = await response.json();
           if (json.success && json.dishName) {
             aiIdentifiedDish = json;
+          } else if (json.fallback) {
+            serverReportedFallback = true;
+            serverFallbackMessage = json.message || 'AI recognition service is using local engine fallback';
           }
         }
       } catch (nodeErr) {
@@ -869,6 +875,15 @@ export async function matchFoodImage(
     console.warn('AI Vision recognition notice:', err);
   }
 
+  // Preserve user uploaded image preview for all match results
+  const userUploadedPreview = typeof imageSource === 'string' && (imageSource.startsWith('data:') || imageSource.startsWith('blob:') || imageSource.startsWith('http'))
+    ? imageSource
+    : undefined;
+
+  const offlineNotice = !aiIdentifiedDish
+    ? 'This server deployment is running in offline fallback mode because GEMINI_API_KEY is not configured in the host environment (Render). Deep multimodal vision is disabled until the API key is added in your hosting dashboard.'
+    : undefined;
+
   // Sort descending by similarity
   scoredEntries.sort((a, b) => b.similarity - a.similarity);
 
@@ -892,7 +907,9 @@ export async function matchFoodImage(
       ],
       visibleIngredients: aiIdentifiedDish?.visibleIngredients,
       culinaryNotes: aiIdentifiedDish?.culinaryNotes || matchedPresetRecipe.directions,
-      isAiVerified: true
+      isAiVerified: true,
+      uploadedImagePreview: userUploadedPreview,
+      offlineNotice: undefined
     });
   }
 
@@ -1002,7 +1019,9 @@ export async function matchFoodImage(
         detectedVisualCues: aiIdentifiedDish.detectedVisualCues,
         visibleIngredients: aiIdentifiedDish.visibleIngredients,
         culinaryNotes: aiIdentifiedDish.culinaryNotes,
-        isAiVerified: true
+        isAiVerified: true,
+        uploadedImagePreview: userUploadedPreview,
+        offlineNotice: undefined
       });
 
       // Also incorporate alternative candidates if provided
@@ -1017,7 +1036,9 @@ export async function matchFoodImage(
               recipe: altRecipe,
               confidence: Math.round(Math.max(15, Math.min(85, altConf)) * 10) / 10,
               similarityScore: Math.round((altConf / 100) * 10000) / 10000,
-              sourceSample: 'AI Alternative Visual Hypothesis'
+              sourceSample: 'AI Alternative Visual Hypothesis',
+              uploadedImagePreview: userUploadedPreview,
+              offlineNotice: undefined
             });
           }
         }
@@ -1033,7 +1054,9 @@ export async function matchFoodImage(
       recipe: matchedPresetRecipe,
       confidence: 98.8,
       similarityScore: 0.988,
-      sourceSample: presetEntry?.filename || `${matchedPresetRecipe.id}_ref.jpg`
+      sourceSample: presetEntry?.filename || `${matchedPresetRecipe.id}_ref.jpg`,
+      uploadedImagePreview: userUploadedPreview,
+      offlineNotice: undefined
     });
   }
 
@@ -1048,7 +1071,9 @@ export async function matchFoodImage(
         recipe,
         confidence: Math.max(12, Math.min(99.4, confidence)),
         similarityScore: Math.round(similarity * 10000) / 10000,
-        sourceSample: entry.filename
+        sourceSample: entry.filename,
+        uploadedImagePreview: userUploadedPreview,
+        offlineNotice: offlineNotice
       });
     }
   }

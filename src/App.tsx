@@ -235,6 +235,7 @@ export default function App() {
               <MatchResults
                 matches={matches}
                 inferenceMs={inferenceMs}
+                uploadedImage={selectedImage}
                 onToggleFavorite={toggleFavorite}
                 isFavorite={isFavorite}
                 onInspectFeatures={() => setActiveTab('visualizer')}

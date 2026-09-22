@@ -26,7 +26,8 @@ import {
   UtensilsCrossed,
   Bell,
   X,
-  MapPin
+  MapPin,
+  AlertCircle
 } from 'lucide-react';
 import { MatchResult, Recipe, GlobalRecipe } from '../types';
 import { playChimeSound, scaleIngredientsText } from '../utils/mlEngine';
@@ -37,6 +38,7 @@ import { InteractiveCookingAssistant } from './InteractiveCookingAssistant';
 interface MatchResultsProps {
   matches: MatchResult[];
   inferenceMs: number;
+  uploadedImage?: string | null;
   onToggleFavorite: (recipeId: string) => void;
   isFavorite: (recipeId: string) => boolean;
   onInspectFeatures: () => void;
@@ -48,6 +50,7 @@ interface MatchResultsProps {
 export const MatchResults: React.FC<MatchResultsProps> = ({
   matches,
   inferenceMs,
+  uploadedImage,
   onToggleFavorite,
   isFavorite,
   onInspectFeatures,
@@ -96,6 +99,7 @@ export const MatchResults: React.FC<MatchResultsProps> = ({
   const isViewingCandidate = activeMatch.recipe.id !== topMatch.recipe.id;
   const candidateRank = matches.findIndex((m) => m.recipe.id === activeMatch.recipe.id) + 1;
   const similarMatches = matches.slice(1, 5);
+  const displayUploadedImage = uploadedImage || activeMatch.uploadedImagePreview;
 
   // Break directions into distinct structured steps
   const stepsList = currentRecipe.directions
@@ -295,24 +299,61 @@ export const MatchResults: React.FC<MatchResultsProps> = ({
         </div>
       )}
 
+      {/* Offline Fallback Warning Notice */}
+      {activeMatch.offlineNotice && (
+        <div className="p-4 rounded-xl bg-amber-950/40 border border-amber-500/40 text-xs text-amber-200 flex items-start gap-3 shadow-md animate-in fade-in">
+          <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <div className="font-bold text-amber-300">Offline Fallback Classification Active</div>
+            <p className="text-stone-300 leading-relaxed">
+              {activeMatch.offlineNotice}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Main Top Match Card */}
       <div className="bg-stone-900 border border-stone-800 rounded-xl overflow-hidden shadow-md">
         {/* Header bar with confidence & actions */}
         <div className="p-5 sm:p-6 bg-stone-900 border-b border-stone-800">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
             
-            {/* Dish Photo + Title */}
+            {/* Dish Photo(s) + Title */}
             <div className="flex items-start sm:items-center gap-4">
-              {currentRecipe.referenceImages?.[0] && (
-                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-stone-800 border border-stone-700 flex-shrink-0 shadow-lg relative">
-                  <ImageWithFallback
-                    src={currentRecipe.referenceImages[0]}
-                    alt={currentRecipe.name}
-                    foodName={currentRecipe.name}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              )}
+              <div className="flex items-center gap-2.5">
+                {displayUploadedImage && (
+                  <div className="relative group">
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-stone-950 border-2 border-amber-500 flex-shrink-0 shadow-lg relative">
+                      <img
+                        src={displayUploadedImage}
+                        alt="Your uploaded dish"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-amber-500 text-stone-950 text-[9px] font-black uppercase tracking-wider shadow whitespace-nowrap">
+                      Your Photo
+                    </span>
+                  </div>
+                )}
+
+                {currentRecipe.referenceImages?.[0] && (
+                  <div className="relative group">
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-stone-800 border border-stone-700 flex-shrink-0 shadow-lg relative">
+                      <ImageWithFallback
+                        src={currentRecipe.referenceImages[0]}
+                        alt={currentRecipe.name}
+                        foodName={currentRecipe.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    {displayUploadedImage && (
+                      <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-stone-800 text-stone-300 border border-stone-700 text-[9px] font-bold uppercase tracking-wider shadow whitespace-nowrap">
+                        Recipe
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
 
               <div>
                 <div className="flex items-center gap-2">
